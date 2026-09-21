@@ -1,0 +1,7 @@
+{
+  "name": "AgroTrack",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}
