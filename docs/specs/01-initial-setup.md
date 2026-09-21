@@ -1,6 +1,6 @@
 # Spec 01: Initial Setup & Base Architecture
 
-**Status:** Approved / In Progress
+**Status:** Finished
 **Date:** 2026-09-21
 **Target Branch:** `chore/initial-setup`
 
