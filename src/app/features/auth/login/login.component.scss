@@ -1,0 +1,61 @@
+.login-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.logo-section {
+  margin-bottom: 2.5rem;
+  margin-top: 10vh;
+  
+  .logo {
+    width: 100px;
+    height: 100px;
+    object-fit: contain;
+    margin-bottom: 1rem;
+  }
+
+  h1 {
+    font-weight: 700;
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--ion-color-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  p {
+    color: var(--ion-color-medium);
+    margin-top: 0.5rem;
+  }
+}
+
+.error-msg {
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  --padding-start: 16px;
+}
+
+.form-actions {
+  margin-top: 2.5rem;
+}
+
+.login-footer {
+  margin-top: 2rem;
+  
+  .forgot-password {
+    color: var(--ion-color-primary);
+    text-decoration: none;
+    font-weight: 500;
+  }
+}
+
+ion-list {
+  background: transparent;
+}

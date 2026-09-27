@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonMenuButton, IonIcon, IonBadge, IonAvatar, IonButton } from '@ionic/angular';
+import { IonHeader, IonToolbar, IonContent, IonButtons, IonMenuButton, IonIcon, IonBadge, IonAvatar, IonButton } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { notificationsOutline } from 'ionicons/icons';
 
@@ -8,7 +8,7 @@ import { notificationsOutline } from 'ionicons/icons';
   templateUrl: 'home.page.html',
   styleUrls: ['home.page.scss'],
   standalone: true,
-  imports: [IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonMenuButton, IonIcon, IonBadge, IonAvatar, IonButton],
+  imports: [IonHeader, IonToolbar, IonContent, IonButtons, IonMenuButton, IonIcon, IonBadge, IonAvatar, IonButton],
 })
 export class HomePage {
   constructor() {
