@@ -1,5 +1,9 @@
 # Spec 02: Autenticación y Estructura Base (Mobile)
 
+**Status:** Finished  
+**Date:** 2026-09-27  
+**Target Branch:** `feature/auth`
+
 ## 1. Objetivo
 Establecer la estructura de directorios principal (`core/`, `shared/`, `features/`) de acuerdo al estándar utilizado en el proyecto web de AgroTrack, y desarrollar la primera funcionalidad funcional: el Login (Autenticación), adaptado a la experiencia móvil utilizando los componentes UI de Ionic.
 
