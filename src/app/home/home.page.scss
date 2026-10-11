@@ -1,27 +1,107 @@
-#container {
-  text-align: center;
-
+.notification-badge {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 4px;
+  right: 4px;
+  font-size: 0.6rem;
+  padding: 3px 5px;
+  border-radius: 50%;
 }
 
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
+.dashboard-header {
+  margin-bottom: 1.5rem;
+  
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--ion-color-dark);
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    margin: 0;
+  }
 }
 
-#container p {
-  font-size: 16px;
-  line-height: 22px;
+.loading-container, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--ion-color-medium);
+  text-align: center;
+  
+  ion-spinner {
+    margin-bottom: 1rem;
+  }
+}
 
-  color: #8c8c8c;
+.fincas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 
+.finca-card {
   margin: 0;
-}
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 
-#container a {
-  text-decoration: none;
+  ion-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  ion-card-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    text-transform: none;
+  }
+
+  .weather-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+
+    &.empty-weather {
+      justify-content: center;
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+
+    .weather-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .temperature {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: var(--ion-color-dark);
+      }
+    }
+
+    .weather-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+      
+      p {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+    }
+  }
 }

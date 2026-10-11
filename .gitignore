@@ -13,6 +13,10 @@ $RECYCLE.BIN/
 log.txt
 
 
+# IA
+MEMORY.md
+AGENTS.md
+
 /.sourcemaps
 /.versions
 /coverage
