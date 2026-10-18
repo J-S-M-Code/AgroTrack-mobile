@@ -1,0 +1,57 @@
+<ion-content class="ion-padding ion-text-center">
+  <div class="login-container">
+    <div class="logo-section">
+      <img src="assets/icon/favicon.png" alt="AgroTrack Logo" class="logo" />
+      <h1>AgroTrack <ion-badge color="primary">BETA</ion-badge></h1>
+      <p>Gestión Agrícola Inteligente</p>
+    </div>
+
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
+      
+      <ion-item *ngIf="errorMessage" color="danger" class="error-msg" lines="none">
+        <ion-icon name="warning-outline" slot="start"></ion-icon>
+        <ion-label class="ion-text-wrap">{{ errorMessage }}</ion-label>
+      </ion-item>
+
+      <ion-list lines="full">
+        <ion-item>
+          <ion-icon name="mail-outline" slot="start" color="medium"></ion-icon>
+          <ion-input 
+            type="email" 
+            name="email" 
+            [(ngModel)]="credentials.email" 
+            required 
+            placeholder="usuario@agrotrack.com"
+            label="Correo Electrónico"
+            labelPlacement="floating"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item>
+          <ion-icon name="lock-closed-outline" slot="start" color="medium"></ion-icon>
+          <ion-input 
+            type="password" 
+            name="password" 
+            [(ngModel)]="credentials.password" 
+            required 
+            placeholder="••••••••"
+            label="Contraseña"
+            labelPlacement="floating"
+          ></ion-input>
+        </ion-item>
+      </ion-list>
+
+      <div class="form-actions ion-margin-top">
+        <ion-button expand="block" type="submit" [disabled]="!loginForm.form.valid || isLoading">
+          <ion-spinner *ngIf="isLoading" name="crescent" slot="start"></ion-spinner>
+          <span *ngIf="!isLoading">Ingresar</span>
+          <ion-icon *ngIf="!isLoading" name="arrow-forward-outline" slot="end"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="login-footer ion-margin-top">
+        <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+      </div>
+    </form>
+  </div>
+</ion-content>
