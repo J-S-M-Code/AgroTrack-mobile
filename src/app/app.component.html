@@ -6,56 +6,81 @@
         <ion-title>AgroTrack <ion-badge color="warning" style="vertical-align: middle; margin-left: 5px;">BETA</ion-badge></ion-title>
       </ion-toolbar>
     </ion-header>
+    
     <ion-content>
       <ion-list lines="none">
         <ion-menu-toggle auto-hide="false">
-          <!-- Menú Principal -->
-          <ion-item button routerLink="/home" routerDirection="root">
+          
+          <!-- Siempre visible (Estado Reducido) -->
+          <ion-item button routerLink="/home" routerDirection="root" (click)="goToFincas()">
             <ion-icon slot="start" name="home-outline"></ion-icon>
-            <ion-label>Fincas</ion-label>
+            <ion-label>Mis Fincas</ion-label>
           </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="grid-outline"></ion-icon>
-            <ion-label>Lotes</ion-label>
-          </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="map-outline"></ion-icon>
-            <ion-label>Mapa</ion-label>
-          </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="layers-outline"></ion-icon>
-            <ion-label>Mapas Espectrales</ion-label>
-          </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="notifications-outline"></ion-icon>
-            <ion-label>Novedades</ion-label>
-          </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="clipboard-outline"></ion-icon>
-            <ion-label>Tareas</ion-label>
-          </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="leaf-outline"></ion-icon>
-            <ion-label>Cultivos</ion-label>
-          </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="paw-outline"></ion-icon>
-            <ion-label>Animales</ion-label>
-          </ion-item>
+
+          <!-- Visible Solo si hay Finca Seleccionada -->
+          <ng-container *ngIf="contextService.isFarmContext$ | async">
+            <ng-container *ngIf="(contextService.userRole$ | async) !== 'WORKER' && (contextService.userRole$ | async) !== 'APPLICATOR'">
+              <ion-item button>
+                <ion-icon slot="start" name="grid-outline"></ion-icon>
+                <ion-label>Lotes</ion-label>
+              </ion-item>
+            </ng-container>
+
+            <ion-item button>
+              <ion-icon slot="start" name="map-outline"></ion-icon>
+              <ion-label>Mapa</ion-label>
+            </ion-item>
+
+            <ng-container *ngIf="(contextService.userRole$ | async) === 'OWNER' || (contextService.userRole$ | async) === 'FOREMAN' || (contextService.userRole$ | async) === 'APPLICATOR' || (contextService.userRole$ | async) === 'AGRONOMIST'">
+              <ion-item button>
+                <ion-icon slot="start" name="layers-outline"></ion-icon>
+                <ion-label>Mapas Espectrales</ion-label>
+              </ion-item>
+            </ng-container>
+
+            <ion-item button>
+              <ion-icon slot="start" name="notifications-outline"></ion-icon>
+              <ion-label>Novedades</ion-label>
+            </ion-item>
+
+            <ion-item button>
+              <ion-icon slot="start" name="clipboard-outline"></ion-icon>
+              <ion-label>Tareas</ion-label>
+            </ion-item>
+
+            <ng-container *ngIf="(contextService.userRole$ | async) !== 'WORKER' && (contextService.userRole$ | async) !== 'APPLICATOR' && (contextService.userRole$ | async) !== 'VETERINARIAN'">
+              <ion-item button>
+                <ion-icon slot="start" name="leaf-outline"></ion-icon>
+                <ion-label>Cultivos</ion-label>
+              </ion-item>
+            </ng-container>
+
+            <ng-container *ngIf="(contextService.userRole$ | async) !== 'WORKER' && (contextService.userRole$ | async) !== 'APPLICATOR' && (contextService.userRole$ | async) !== 'AGRONOMIST'">
+              <ion-item button>
+                <ion-icon slot="start" name="paw-outline"></ion-icon>
+                <ion-label>Animales</ion-label>
+              </ion-item>
+            </ng-container>
+          </ng-container>
+
         </ion-menu-toggle>
       </ion-list>
       
       <ion-list lines="none" class="ion-margin-top">
         <ion-menu-toggle auto-hide="false">
-          <!-- Bottom Menu -->
+          <!-- Opciones Inferiores -->
           <ion-item button>
             <ion-icon slot="start" name="settings-outline"></ion-icon>
             <ion-label>Configuración</ion-label>
           </ion-item>
-          <ion-item button>
-            <ion-icon slot="start" name="people-outline"></ion-icon>
-            <ion-label>Personas</ion-label>
-          </ion-item>
+
+          <ng-container *ngIf="(contextService.isFarmContext$ | async) && ((contextService.userRole$ | async) === 'OWNER' || (contextService.userRole$ | async) === 'FOREMAN')">
+            <ion-item button>
+              <ion-icon slot="start" name="people-outline"></ion-icon>
+              <ion-label>Personas</ion-label>
+            </ion-item>
+          </ng-container>
+
           <ion-item button (click)="logout()">
             <ion-icon slot="start" name="log-out-outline" color="danger"></ion-icon>
             <ion-label color="danger">Cerrar Sesión</ion-label>

@@ -8,6 +8,7 @@ import {
   pawOutline, settingsOutline, peopleOutline, logOutOutline
 } from 'ionicons/icons';
 import { AuthService } from './core/auth/services/auth.service';
+import { ContextService } from './core/services/context.service';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -19,6 +20,7 @@ import { RouterModule } from '@angular/router';
 })
 export class AppComponent {
   authService = inject(AuthService);
+  contextService = inject(ContextService);
 
   constructor() {
     addIcons({
@@ -28,7 +30,12 @@ export class AppComponent {
     });
   }
 
+  goToFincas() {
+    this.contextService.clearFarmContext();
+  }
+
   logout() {
+    this.contextService.clearFarmContext();
     this.authService.logout();
   }
 }
