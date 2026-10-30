@@ -1,6 +1,6 @@
 # Spec 03: Navegación Principal y Dashboard de Fincas
 
-**Status:** Implementing  
+**Status:** Finished  
 **Date:** 2026-10-6  
 **Target Branch:** `feature/dashboard-navigation`
 

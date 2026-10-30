@@ -26,6 +26,7 @@
     "@capacitor/keyboard": "8.0.5",
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/status-bar": "8.0.3",
+    "@geoman-io/leaflet-geoman-free": "^2.20.2",
     "@ionic/angular": "^9.0.0",
     "ionicons": "^8.1.0",
     "leaflet": "^1.9.4",
