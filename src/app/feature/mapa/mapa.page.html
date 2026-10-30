@@ -217,7 +217,7 @@
   </ion-modal>
 
   <!-- Bottom Sheet: Detalle de Lote -->
-  <ion-modal [isOpen]="isLoteInfoOpen" (didDismiss)="isLoteInfoOpen = false" [initialBreakpoint]="0.52" [breakpoints]="[0, 0.52, 0.85]">
+  <ion-modal [isOpen]="isLoteInfoOpen" (didDismiss)="isLoteInfoOpen = false" [initialBreakpoint]="0.58" [breakpoints]="[0, 0.58, 0.88]">
     <ng-template>
       <ion-header class="ion-no-border">
         <ion-toolbar>
@@ -258,7 +258,32 @@
               <p>{{ getTipoSueloLabel(selectedLote?.soilType) }}</p>
             </ion-label>
           </ion-item>
+          <ion-item *ngIf="selectedLote?.type === 'AGRICULTURAL' && cultivoDelLoteSeleccionado as crop" button="true" detail="true" (click)="irADetalleCultivoDesdeLote(crop.id)">
+            <ion-icon name="leaf-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>
+              <h3>Cultivo Asignado</h3>
+              <p><strong>{{ crop.especie }} ({{ crop.variedad }})</strong> · {{ crop.estado }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item *ngIf="selectedLote?.type === 'AGRICULTURAL' && !cultivoDelLoteSeleccionado">
+            <ion-icon name="leaf-outline" slot="start" color="medium"></ion-icon>
+            <ion-label>
+              <h3>Cultivo Asignado</h3>
+              <p>Sin cultivo registrado en este lote</p>
+            </ion-label>
+          </ion-item>
         </ion-list>
+
+        <ion-button
+          *ngIf="selectedLote?.type === 'AGRICULTURAL' && !cultivoDelLoteSeleccionado && canManageCrops"
+          expand="block"
+          fill="outline"
+          color="primary"
+          class="ion-margin-top"
+          (click)="irACrearCultivoEnLote(selectedLote.id)">
+          <ion-icon name="add-outline" slot="start"></ion-icon>
+          Registrar Cultivo en este Lote
+        </ion-button>
 
         <!-- Aquí se redirigiría a la vista del lote específico (ej. app/lotes/:id) -->
         <ion-button expand="block" class="ion-margin-top ion-margin-bottom" color="primary">

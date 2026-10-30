@@ -1,7 +1,8 @@
 # Spec 05: Módulo de Cultivos (Full Parity con Web y UX Móvil)
 
-**Status:** In Progress  
+**Status:** Review  
 **Date:** 2026-10-30  
+**Completed Date:** 2026-10-30  
 **Target Branch:** `feature/cultivos`
 
 ## 1. Objetivo
@@ -91,8 +92,8 @@ Implementar el módulo completo de **Gestión de Cultivos** en la aplicación m�
 - **Ciclo de Vida Leaflet y RxJS:** Suscripciones gestionadas con `takeUntil(destroy$)`, recálculo `invalidateSize()` en `ionViewDidEnter` y destrucción limpia de mapas (`map.remove()`) en `ngOnDestroy`.
 
 ## 5. Plan de Implementación
-- [ ] Crear modelo `src/app/core/models/cultivo.model.ts` y servicio `src/app/core/services/crop.service.ts`.
-- [ ] Implementar listado `cultivos.page` con búsqueda, segmentos, pull-to-refresh, Bottom Sheet de filtros y FAB de alta.
-- [ ] Implementar formulario `cultivo-form.page` (alta, edición, selector `TypeCrop`, chips de especies, validaciones de superficie/fechas y minimapa Leaflet).
-- [ ] Implementar vista `cultivo-detalle.page` (tarjetas SENASA/Ciclo, Cuaderno de Campo, mapa satelital con máscara espectral y modales de Cosecha, Estado Fenológico y Eliminación con RENSPA).
-- [ ] Conectar rutas en `app.routes.ts`, enlace en menú lateral (`app.component.html`) y acceso contextual desde lotes agrícolas en `mapa.page`.
+- [x] Crear modelo `src/app/core/models/cultivo.model.ts` y servicio `src/app/core/services/crop.service.ts`.
+- [x] Implementar listado `cultivos.page` con búsqueda, segmentos, pull-to-refresh, Bottom Sheet de filtros y FAB de alta, conectado al menú lateral.
+- [x] Implementar formulario `cultivo-form.page` (alta, edición, selector `TypeCrop`, chips de especies, validaciones de superficie/fechas y minimapa Leaflet).
+- [x] Implementar vista `cultivo-detalle.page` (tarjetas SENASA/Ciclo, Cuaderno de Campo, mapa satelital con máscara espectral y modales de Cosecha, Estado Fenológico y Eliminación con RENSPA) y ruta `/cultivos/:id`.
+- [x] Conectar rutas de formulario (`/cultivos/nuevo`, `/cultivos/editar/:id`) y acceso contextual desde lotes agrícolas en `mapa.page`.

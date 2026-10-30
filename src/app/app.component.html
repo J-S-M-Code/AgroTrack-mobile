@@ -49,7 +49,7 @@
             </ion-item>
 
             <ng-container *ngIf="(contextService.userRole$ | async) !== 'WORKER' && (contextService.userRole$ | async) !== 'APPLICATOR' && (contextService.userRole$ | async) !== 'VETERINARIAN'">
-              <ion-item button>
+              <ion-item button routerLink="/cultivos" routerDirection="root">
                 <ion-icon slot="start" name="leaf-outline"></ion-icon>
                 <ion-label>Cultivos</ion-label>
               </ion-item>

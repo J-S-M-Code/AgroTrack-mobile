@@ -1,0 +1,226 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="defaultBackHref" text=""></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>{{ esEdicion ? 'Modificar Cultivo' : 'Nuevo Cultivo' }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="state-box" *ngIf="isLoading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>Preparando formulario...</p>
+  </div>
+
+  <form
+    class="form-body"
+    *ngIf="!isLoading"
+    (submit)="guardarCultivo(); $event.preventDefault()">
+
+    <div class="form-intro">
+      <p>
+        {{ esEdicion ? 'Actualiza' : 'Registra' }} los datos agronómicos y legales (SENASA) en
+        <strong>{{ farmName }}</strong>.
+      </p>
+    </div>
+
+    <div class="error-banner" *ngIf="mensajeError">
+      {{ mensajeError }}
+    </div>
+
+    <!-- SECCIÓN 1: Datos de la Planta -->
+    <ion-card class="form-card">
+      <ion-card-content class="card-pad">
+        <h3 class="section-heading">
+          <ion-icon name="leaf-outline"></ion-icon>
+          Datos de la Planta
+        </h3>
+
+        <ion-list lines="full" class="clean-list">
+          <ion-item>
+            <ion-select
+              label="Tipo de Cultivo *"
+              labelPlacement="stacked"
+              interface="popover"
+              name="typeCrop"
+              [(ngModel)]="typeCrop">
+              <ion-select-option *ngFor="let tc of tiposCultivo" [value]="tc.value">
+                {{ tc.label }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-input
+              label="Especie *"
+              labelPlacement="stacked"
+              placeholder="Ej: Vid, Nogal, Olivo..."
+              name="especie"
+              [(ngModel)]="especie"
+              required>
+            </ion-input>
+          </ion-item>
+        </ion-list>
+
+        <!-- Sugerencias rápidas de especie -->
+        <div class="species-chips">
+          <ion-chip
+            *ngFor="let sp of especiesSugeridas"
+            [color]="especie === sp ? 'primary' : 'medium'"
+            [outline]="especie !== sp"
+            (click)="seleccionarEspecieSugerida(sp)">
+            <ion-label>{{ sp }}</ion-label>
+          </ion-chip>
+        </div>
+
+        <ion-list lines="full" class="clean-list">
+          <ion-item>
+            <ion-input
+              label="Variedad *"
+              labelPlacement="stacked"
+              placeholder="Ej: Malbec, Chandler, Arauco..."
+              name="variedad"
+              [(ngModel)]="variedad"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Fecha de Plantación / Siembra *</ion-label>
+            <input
+              type="date"
+              class="native-date-input"
+              name="fechaPlantacion"
+              [(ngModel)]="fechaPlantacion"
+              required />
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Fecha Estimada de Cosecha *</ion-label>
+            <input
+              type="date"
+              class="native-date-input"
+              name="fechaCosecha"
+              [(ngModel)]="fechaCosecha"
+              required />
+          </ion-item>
+
+          <ion-item lines="none" class="perennial-item">
+            <ion-toggle
+              justify="space-between"
+              name="isPerennial"
+              [(ngModel)]="isPerennial">
+              <div>
+                <strong>¿Es cultivo perenne?</strong>
+                <p class="toggle-sub">No finaliza tras la cosecha (ej. frutales)</p>
+              </div>
+            </ion-toggle>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- SECCIÓN 2: Asignación Territorial y SENASA -->
+    <ion-card class="form-card">
+      <ion-card-content class="card-pad">
+        <h3 class="section-heading">
+          <ion-icon name="location-outline"></ion-icon>
+          Asignación Territorial y SENASA
+        </h3>
+
+        <div class="info-note" *ngIf="lotesAgricolas.length === 0 && !esEdicion">
+          Esta finca aún no tiene lotes de tipo <strong>Agrícola</strong>. Puedes trazar uno desde el Mapa Principal.
+          <div style="margin-top: 8px;">
+            <ion-button size="small" fill="outline" color="primary" (click)="irAMapa()">
+              Ir al Mapa
+            </ion-button>
+          </div>
+        </div>
+
+        <ion-list lines="full" class="clean-list">
+          <ion-item>
+            <ion-select
+              label="Lote / Cuartel Agrícola *"
+              labelPlacement="stacked"
+              interface="popover"
+              placeholder="Selecciona un lote agrícola..."
+              name="selectedLotId"
+              [value]="selectedLotId"
+              [disabled]="esEdicion && tieneLoteOriginal"
+              (ionChange)="onLoteChange($event)">
+              <ion-select-option *ngFor="let lote of lotesAgricolas" [value]="lote.id">
+                {{ lote.name }} ({{ lote.hectares | number:'1.1-2' }} ha)
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-input
+              type="number"
+              step="0.001"
+              label="Superficie Implantada (Hectáreas) *"
+              labelPlacement="stacked"
+              placeholder="Ej: 12.5"
+              name="hectareas"
+              [(ngModel)]="hectareas"
+              required>
+            </ion-input>
+          </ion-item>
+
+          <p class="surface-hint" *ngIf="loteSeleccionado">
+            Superficie máxima disponible en {{ loteSeleccionado.name }}:
+            <strong>{{ loteSeleccionado.hectares | number:'1.0-3' }} ha</strong>
+          </p>
+
+          <ion-item lines="none">
+            <ion-input
+              label="Nº RENSPA (SENASA) *"
+              labelPlacement="stacked"
+              placeholder="Ej: 12.345.678/01"
+              name="renspa"
+              [(ngModel)]="renspa"
+              required>
+            </ion-input>
+          </ion-item>
+        </ion-list>
+
+        <!-- Vista Previa Satelital del Polígono -->
+        <div class="preview-block">
+          <span class="preview-label">Vista Previa del Polígono</span>
+          <div class="preview-map-container">
+            <div id="mapa-form" class="preview-map"></div>
+
+            <div class="map-empty-overlay" *ngIf="!loteSeleccionado">
+              <ion-icon name="map-outline"></ion-icon>
+              <span>Selecciona un lote agrícola arriba para ver su delimitación satelital.</span>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Acciones de Guardado -->
+    <div class="form-actions">
+      <ion-button
+        type="button"
+        expand="block"
+        fill="outline"
+        color="medium"
+        [disabled]="guardando"
+        (click)="cancelar()">
+        Cancelar
+      </ion-button>
+
+      <ion-button
+        type="submit"
+        expand="block"
+        color="primary"
+        [disabled]="guardando">
+        <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+        {{ guardando ? 'Guardando...' : (esEdicion ? 'Guardar Cambios' : 'Registrar Cultivo') }}
+      </ion-button>
+    </div>
+  </form>
+</ion-content>
