@@ -1,0 +1,335 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Mapa de Finca</ion-title>
+    <!-- Botón para alternar controles (FAB alternative or header button) -->
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [scrollY]="false">
+  <!-- Contenedor del Mapa -->
+  <div id="main-map" class="map-container"></div>
+
+  <!-- Botones de Acción Flotantes (FABs) -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="!isDrawingMode && !dibujoFinalizado">
+    <ion-fab-button color="secondary">
+      <ion-icon name="layers"></ion-icon>
+    </ion-fab-button>
+    <ion-fab-list side="top">
+      <!-- Botón de Dibujo -->
+      <ion-fab-button color="light" (click)="iniciarModoDibujo()" title="Dibujar Lote">
+        <ion-icon name="shapes-outline"></ion-icon>
+      </ion-fab-button>
+      <!-- Botón de Capas -->
+      <ion-fab-button color="light" (click)="abrirFiltrosCapas()" title="Capas de Mapa">
+        <ion-icon name="layers-outline"></ion-icon>
+      </ion-fab-button>
+      <!-- Botón de Animales -->
+      <ion-fab-button color="light" (click)="abrirFiltrosAnimales()" title="Animales (SENASA)">
+        <ion-icon name="paw-outline"></ion-icon>
+      </ion-fab-button>
+    </ion-fab-list>
+  </ion-fab>
+
+  <!-- Barra Flotante Inferior de Herramientas de Dibujo (Modo Dibujo) -->
+  <div class="floating-drawing-bar" *ngIf="isDrawingMode && !dibujoFinalizado">
+    <!-- Fila 1: Selector de Herramienta a ancho completo -->
+    <div class="tools-row">
+      <button type="button" class="tool-btn" [class.active]="formaActual === 'Polygon'" (click)="activarHerramientaDibujo('Polygon')" title="Polígono Libre">
+        <ion-icon name="shapes-outline"></ion-icon>
+        <span>Libre</span>
+      </button>
+      <button type="button" class="tool-btn" [class.active]="formaActual === 'Rectangle'" (click)="activarHerramientaDibujo('Rectangle')" title="Rectángulo">
+        <ion-icon name="square-outline"></ion-icon>
+        <span>Rectángulo</span>
+      </button>
+      <button type="button" class="tool-btn" [class.active]="formaActual === 'Circle'" (click)="activarHerramientaDibujo('Circle')" title="Círculo">
+        <ion-icon name="ellipse-outline"></ion-icon>
+        <span>Círculo</span>
+      </button>
+    </div>
+
+    <!-- Fila 2: Indicador / Puntos a la izquierda y Botones de Acción a la derecha -->
+    <div class="actions-row">
+      <div class="drawing-info">
+        <span *ngIf="formaActual === 'Polygon'">
+          Puntos: <strong>{{ puntosDibujados.length }}</strong>
+        </span>
+        <span *ngIf="formaActual === 'Rectangle'">
+          Traza esquinas opuestas
+        </span>
+        <span *ngIf="formaActual === 'Circle'">
+          Arrastra el radio
+        </span>
+      </div>
+
+      <div class="action-buttons-group">
+        <!-- Botón para volver o borrar el último punto -->
+        <button type="button" class="btn-action btn-undo" 
+                *ngIf="formaActual === 'Polygon'" 
+                (click)="deshacerUltimoPunto()" 
+                [disabled]="puntosDibujados.length === 0" 
+                title="Borrar último punto">
+          <ion-icon name="arrow-undo-outline"></ion-icon>
+          <span>Borrar</span>
+        </button>
+
+        <!-- Botón para terminar polígono -->
+        <button type="button" class="btn-action btn-finish" 
+                *ngIf="formaActual === 'Polygon'" 
+                (click)="terminarDibujoPoligono()" 
+                [disabled]="puntosDibujados.length < 3" 
+                title="Terminar">
+          <ion-icon name="checkmark-outline"></ion-icon>
+          <span>Listo</span>
+        </button>
+
+        <!-- Botón para cancelar / salir -->
+        <button type="button" class="btn-action btn-cancel" 
+                (click)="cancelarDibujo()" 
+                title="Cancelar">
+          <ion-icon name="close-outline"></ion-icon>
+          <span>Salir</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Barra Flotante Inferior de Confirmación al finalizar el trazo -->
+  <div class="floating-confirm-bar" *ngIf="dibujoFinalizado">
+    <div class="confirm-content">
+      <div class="confirm-info">
+        <ion-icon name="checkmark-circle" color="success"></ion-icon>
+        <div>
+          <h4>Lote Trazado</h4>
+          <p>{{ nuevoLoteHectareas | number:'1.2-2' }} ha estimadas</p>
+        </div>
+      </div>
+      <div class="confirm-buttons">
+        <ion-button fill="outline" color="medium" size="small" (click)="cancelarDibujo()">
+          <ion-icon name="refresh-outline" slot="start"></ion-icon>
+          Rehacer
+        </ion-button>
+        <ion-button color="success" size="small" (click)="abrirModalGuardar()">
+          <ion-icon name="checkmark-outline" slot="start"></ion-icon>
+          Guardar Lote
+        </ion-button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Sheet: Filtros de Capas e Índices -->
+  <ion-modal [isOpen]="isFiltrosOpen" (didDismiss)="isFiltrosOpen = false" [initialBreakpoint]="0.8" [breakpoints]="[0, 0.8, 1]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title class="modal-title">Capas e Índices</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" (click)="isFiltrosOpen = false" aria-label="Cerrar">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <ion-list>
+          <ion-list-header>Tipo de Mapa</ion-list-header>
+          <ion-radio-group [value]="capaFondoActiva" (ionChange)="cambiarCapaFondo($event)">
+            <ion-item>
+              <ion-radio value="satelite" justify="space-between">Satélite (Google Maps)</ion-radio>
+            </ion-item>
+            <ion-item>
+              <ion-radio value="topografico" justify="space-between">Topográfico (OpenTopoMap)</ion-radio>
+            </ion-item>
+          </ion-radio-group>
+
+          <ion-list-header class="ion-margin-top">Límites y Lotes</ion-list-header>
+          <ion-item>
+            <ion-toggle [checked]="verLimitesFincas" (ionChange)="toggleLimitesFinca($event)" justify="space-between">
+              Ver Lotes de la Finca
+            </ion-toggle>
+          </ion-item>
+
+          <!-- Cabecera de Mapas Espectrales con Switch (Slide) a la derecha -->
+          <ion-item lines="none" class="ion-margin-top">
+            <ion-label style="font-weight: 600; font-size: 1rem;">Mapas Espectrales</ion-label>
+            <ion-toggle [checked]="indiceActivo !== null" 
+                        (ionChange)="toggleSwitchMapasEspectrales($event)" 
+                        [disabled]="indicesDisponibles.length === 0"
+                        justify="space-between">
+            </ion-toggle>
+          </ion-item>
+
+          <ion-item *ngIf="indicesDisponibles.length === 0">
+            <ion-label color="medium" class="ion-text-wrap">No hay mapas procesados para esta finca.</ion-label>
+          </ion-item>
+          
+          <ion-radio-group *ngIf="indicesDisponibles.length > 0" [value]="indiceActivo" (ionChange)="toggleIndice($event)">
+            <ion-item *ngFor="let indice of indicesDisponibles">
+              <ion-radio [value]="indice" justify="space-between">Visualizar Índice: {{ indice }}</ion-radio>
+            </ion-item>
+          </ion-radio-group>
+        </ion-list>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Bottom Sheet: Visualización de Animales (SENASA) -->
+  <ion-modal [isOpen]="isAnimalesOpen" (didDismiss)="isAnimalesOpen = false" [initialBreakpoint]="0.8" [breakpoints]="[0, 0.8, 1]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title class="modal-title">Visualización de Animales</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" (click)="isAnimalesOpen = false" aria-label="Cerrar">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <div class="animal-filter-header">
+          <div>
+            <h3 class="animal-filter-title">Categorías (SENASA)</h3>
+            <p class="animal-filter-subtitle">
+              {{ categoriasSeleccionadas.size }} de {{ categoriasSenasa.length }} seleccionadas
+            </p>
+          </div>
+          <div class="animal-filter-actions">
+            <ion-button size="small" fill="outline" color="primary" (click)="seleccionarTodasCategorias()">Todas</ion-button>
+            <ion-button size="small" fill="clear" color="medium" (click)="deseleccionarTodasCategorias()">Ninguna</ion-button>
+          </div>
+        </div>
+
+        <ion-list class="ion-margin-top">
+          <ion-item *ngFor="let cat of categoriasSenasa">
+            <ion-checkbox [checked]="isCategoriaSeleccionada(cat)" 
+                          (ionChange)="toggleCategoriaAnimal(cat, $event)" 
+                          justify="space-between">
+              {{ cat }}
+            </ion-checkbox>
+          </ion-item>
+        </ion-list>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Bottom Sheet: Detalle de Lote -->
+  <ion-modal [isOpen]="isLoteInfoOpen" (didDismiss)="isLoteInfoOpen = false" [initialBreakpoint]="0.52" [breakpoints]="[0, 0.52, 0.85]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title class="modal-title">Detalle del Lote</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" (click)="isLoteInfoOpen = false" aria-label="Cerrar">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <div class="lote-detail-header">
+          <span class="lote-color-dot" [style.background]="getColorByType(selectedLote?.type).fill" [style.borderColor]="getColorByType(selectedLote?.type).border"></span>
+          <h2 class="ion-no-margin" style="font-weight: 700;">{{ selectedLote?.name }}</h2>
+        </div>
+        <p class="lote-detail-desc">{{ selectedLote?.description || 'Sin descripción' }}</p>
+
+        <ion-list lines="none">
+          <ion-item>
+            <ion-icon name="scan-outline" slot="start" color="primary"></ion-icon>
+            <ion-label>
+              <h3>Área</h3>
+              <p>{{ selectedLote?.area | number:'1.1-2' }} ha</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-icon name="prism-outline" slot="start" [style.color]="getColorByType(selectedLote?.type).fill"></ion-icon>
+            <ion-label>
+              <h3>Tipo de Lote</h3>
+              <p>{{ getTipoLoteLabel(selectedLote?.type) }}</p>
+            </ion-label>
+          </ion-item>
+          <ion-item>
+            <ion-icon name="earth-outline" slot="start" color="success"></ion-icon>
+            <ion-label>
+              <h3>Tipo de Suelo</h3>
+              <p>{{ getTipoSueloLabel(selectedLote?.soilType) }}</p>
+            </ion-label>
+          </ion-item>
+        </ion-list>
+
+        <!-- Aquí se redirigiría a la vista del lote específico (ej. app/lotes/:id) -->
+        <ion-button expand="block" class="ion-margin-top ion-margin-bottom" color="primary">
+          Ver Detalles Completos
+        </ion-button>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Modal Central: Guardar Nuevo Lote -->
+  <ion-modal [isOpen]="isGuardarLoteOpen" (didDismiss)="cancelarGuardado()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar>
+          <ion-title class="modal-title">Guardar Lote</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" [disabled]="guardandoLote" (click)="cancelarGuardado()" aria-label="Cerrar">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+      <ion-content class="ion-padding">
+        <p>Has definido un polígono de <b>{{ nuevoLoteHectareas | number:'1.2-2' }} ha</b>. Completa los datos para guardarlo.</p>
+
+        <div class="save-error-banner" *ngIf="errorGuardandoLote">
+          {{ errorGuardandoLote }}
+        </div>
+
+        <ion-item>
+          <ion-label position="stacked">Nombre del Lote</ion-label>
+          <ion-input [(ngModel)]="nuevoLoteNombre" placeholder="Ej: Potrero 1"></ion-input>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="stacked">Tipo de Lote</ion-label>
+          <ion-select [(ngModel)]="nuevoLoteTipo" interface="popover">
+            <ion-select-option value="PASTURE">Pastura / Ganado</ion-select-option>
+            <ion-select-option value="AGRICULTURAL">Agrícola / Cultivo</ion-select-option>
+            <ion-select-option value="WATER_ZONE">Zona de Agua</ion-select-option>
+            <ion-select-option value="HANDLING_PEN">Corral de Manejo</ion-select-option>
+            <ion-select-option value="FEEDING_ZONE">Zona de Alimentación</ion-select-option>
+            <ion-select-option value="RESERVE">Reserva / Bosque Nativo</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item *ngIf="nuevoLoteTipo === 'AGRICULTURAL' || nuevoLoteTipo === 'PASTURE'">
+          <ion-label position="stacked">Tipo de Suelo</ion-label>
+          <ion-select [(ngModel)]="nuevoLoteSuelo" interface="popover">
+            <ion-select-option value="UNKNOWN">No lo sé (Desconocido)</ion-select-option>
+            <ion-select-option value="CLAYEY">Arcilloso</ion-select-option>
+            <ion-select-option value="SANDY">Arenoso</ion-select-option>
+            <ion-select-option value="SILTY">Limoso</ion-select-option>
+            <ion-select-option value="LOAMY">Franco</ion-select-option>
+            <ion-select-option value="SANDY_LOAM">Franco-Arenoso</ion-select-option>
+            <ion-select-option value="CLAY_LOAM">Franco-Arcilloso</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item>
+          <ion-label position="stacked">Descripción (Opcional)</ion-label>
+          <ion-textarea [(ngModel)]="nuevoLoteDescripcion" rows="3"></ion-textarea>
+        </ion-item>
+
+        <div class="ion-margin-top">
+          <ion-button expand="block" (click)="guardarLote()" [disabled]="!nuevoLoteNombre.trim() || guardandoLote">
+            {{ guardandoLote ? 'Guardando...' : 'Guardar Lote' }}
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+</ion-content>

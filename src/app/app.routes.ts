@@ -16,5 +16,10 @@ export const routes: Routes = [
     path: '',
     redirectTo: 'login',
     pathMatch: 'full',
+  },
+  {
+    path: 'mapa',
+    loadComponent: () => import('./feature/mapa/mapa.page').then(m => m.MapaPage),
+    canActivate: [authGuard]
   }
 ];

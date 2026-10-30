@@ -1,4 +1,5 @@
 import { Component, inject, ChangeDetectorRef } from '@angular/core';
+import { Router } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { 
   IonHeader, IonToolbar, IonContent, IonButtons, IonMenuButton, 
@@ -31,6 +32,7 @@ export class HomePage implements ViewWillEnter {
   contextService = inject(ContextService);
   userService = inject(UserService);
   cdr = inject(ChangeDetectorRef);
+  router = inject(Router);
   
   fincas: Finca[] = [];
   isLoading = true;
@@ -83,7 +85,6 @@ export class HomePage implements ViewWillEnter {
 
   seleccionarFinca(finca: Finca) {
     this.contextService.setFarmContext(finca);
-    // TODO: Redirigir al dashboard interno de la finca si es necesario
-    console.log('Finca seleccionada:', finca);
+    this.router.navigate(['/mapa']);
   }
 }
