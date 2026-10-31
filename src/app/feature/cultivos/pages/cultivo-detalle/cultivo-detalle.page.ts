@@ -28,7 +28,6 @@ import {
   IonTextarea,
   IonRadioGroup,
   IonRadio,
-  ActionSheetController,
   ToastController,
   ViewWillEnter,
   ViewDidEnter,
@@ -55,6 +54,7 @@ import {
   trashOutline,
   close,
   refreshOutline,
+  chevronForwardOutline,
 } from 'ionicons/icons';
 import * as L from 'leaflet';
 
@@ -115,7 +115,6 @@ export class CultivoDetallePage
   private lotService = inject(LotService);
   private spectralMapService = inject(SpectralMapService);
   private contextService = inject(ContextService);
-  private actionSheetCtrl = inject(ActionSheetController);
   private toastCtrl = inject(ToastController);
   private cdr = inject(ChangeDetectorRef);
 
@@ -147,6 +146,8 @@ export class CultivoDetallePage
   capaActiva = 'Normal';
 
   // Modales de Acciones
+  isMenuAccionesOpen = false;
+  private accionPendienteMenu: (() => void) | null = null;
   guardandoAccion = false;
 
   isModalCosechaOpen = false;
@@ -184,6 +185,7 @@ export class CultivoDetallePage
       trashOutline,
       close,
       refreshOutline,
+      chevronForwardOutline,
     });
   }
 
@@ -244,6 +246,8 @@ export class CultivoDetallePage
   }
 
   ionViewWillLeave() {
+    this.accionPendienteMenu = null;
+    this.isMenuAccionesOpen = false;
     this.isModalCosechaOpen = false;
     this.isModalEstadoOpen = false;
     this.isModalEliminarOpen = false;
@@ -498,49 +502,47 @@ export class CultivoDetallePage
     }
   }
 
-  // --- MENÚ DE ACCIONES (ACTION SHEET) ---
-  async abrirMenuAcciones() {
+  // --- MENÚ DE ACCIONES (BOTTOM SHEET) ---
+  abrirMenuAcciones() {
     if (!this.cultivo || !this.canManageCrops) return;
+    this.accionPendienteMenu = null;
+    this.isMenuAccionesOpen = true;
+    this.cdr.detectChanges();
+  }
 
-    const buttons: any[] = [];
+  cerrarMenuAcciones() {
+    this.accionPendienteMenu = null;
+    this.isMenuAccionesOpen = false;
+  }
 
-    if (this.cultivo.phenologicalState !== 'HARVESTED') {
-      buttons.push({
-        text: 'Registrar Cosecha',
-        icon: 'leaf-outline',
-        handler: () => this.abrirModalCosecha(),
-      });
-    }
-
-    buttons.push(
-      {
-        text: 'Cambiar Estado Fenológico',
-        icon: 'pulse-outline',
-        handler: () => this.abrirModalEstado(),
-      },
-      {
-        text: 'Editar Cultivo',
-        icon: 'create-outline',
-        handler: () => this.editarCultivo(),
-      },
-      {
-        text: 'Eliminar Cultivo',
-        role: 'destructive',
-        icon: 'trash-outline',
-        handler: () => this.abrirModalEliminar(),
-      },
-      {
-        text: 'Cancelar',
-        role: 'cancel',
-        icon: 'close',
+  ejecutarAccionMenu(accion: 'cosecha' | 'estado' | 'editar' | 'eliminar') {
+    this.accionPendienteMenu = () => {
+      switch (accion) {
+        case 'cosecha':
+          this.abrirModalCosecha();
+          break;
+        case 'estado':
+          this.abrirModalEstado();
+          break;
+        case 'editar':
+          this.editarCultivo();
+          break;
+        case 'eliminar':
+          this.abrirModalEliminar();
+          break;
       }
-    );
+    };
+    this.isMenuAccionesOpen = false;
+    this.cdr.detectChanges();
+  }
 
-    const sheet = await this.actionSheetCtrl.create({
-      header: `${this.cultivo.especie} (${this.cultivo.variedad})`,
-      buttons,
-    });
-    await sheet.present();
+  onMenuAccionesDismiss() {
+    this.isMenuAccionesOpen = false;
+    if (this.accionPendienteMenu) {
+      const ejecutar = this.accionPendienteMenu;
+      this.accionPendienteMenu = null;
+      ejecutar();
+    }
   }
 
   // --- ACCIÓN 1: REGISTRAR COSECHA ---

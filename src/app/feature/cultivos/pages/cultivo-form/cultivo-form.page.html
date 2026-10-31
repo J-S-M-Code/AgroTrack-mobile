@@ -45,7 +45,8 @@
               labelPlacement="stacked"
               interface="popover"
               name="typeCrop"
-              [(ngModel)]="typeCrop">
+              [(ngModel)]="typeCrop"
+              (ionChange)="actualizarSugerenciasEspecie()">
               <ion-select-option *ngFor="let tc of tiposCultivo" [value]="tc.value">
                 {{ tc.label }}
               </ion-select-option>
@@ -57,22 +58,30 @@
               label="Especie *"
               labelPlacement="stacked"
               placeholder="Ej: Vid, Nogal, Olivo..."
+              autocomplete="off"
               name="especie"
               [(ngModel)]="especie"
+              (ionFocus)="onEspecieFocus()"
+              (ionInput)="onEspecieInput($event)"
+              (ionBlur)="onEspecieBlur()"
               required>
             </ion-input>
           </ion-item>
         </ion-list>
 
-        <!-- Sugerencias rápidas de especie -->
-        <div class="species-chips">
-          <ion-chip
-            *ngFor="let sp of especiesSugeridas"
-            [color]="especie === sp ? 'primary' : 'medium'"
-            [outline]="especie !== sp"
-            (click)="seleccionarEspecieSugerida(sp)">
-            <ion-label>{{ sp }}</ion-label>
-          </ion-chip>
+        <!-- Autocompletado reactivo de especie al escribir -->
+        <div class="autocomplete-anchor" *ngIf="mostrarSugerenciasEspecie && especiesFiltradas.length > 0">
+          <div class="species-dropdown">
+            <button
+              type="button"
+              class="species-option"
+              *ngFor="let sp of especiesFiltradas"
+              (mousedown)="seleccionarEspecieSugerida(sp); $event.preventDefault()"
+              (click)="seleccionarEspecieSugerida(sp)">
+              <ion-icon name="leaf-outline"></ion-icon>
+              <span>{{ sp }}</span>
+            </button>
+          </div>
         </div>
 
         <ion-list lines="full" class="clean-list">

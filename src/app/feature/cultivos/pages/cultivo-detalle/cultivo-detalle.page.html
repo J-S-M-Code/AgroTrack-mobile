@@ -224,6 +224,84 @@
     </ion-card>
   </div>
 
+  <!-- MODAL 0: Menú de Opciones del Cultivo (⋮) -->
+  <ion-modal
+    style="--height: auto;"
+    [isOpen]="isMenuAccionesOpen"
+    (didDismiss)="onMenuAccionesDismiss()"
+    [initialBreakpoint]="1"
+    [breakpoints]="[0, 1]">
+    <ng-template>
+      <div *ngIf="cultivo" style="padding: 20px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: #fff;">
+        <div style="text-align: center; font-size: 0.92rem; color: #64748b; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+          Nº RENSPA: <strong style="color: #1e293b;">{{ cultivo.renspa || 'No especificado' }}</strong>
+        </div>
+
+        <div class="act-list">
+          <button
+            type="button"
+            class="act-btn"
+            *ngIf="cultivo.phenologicalState !== 'HARVESTED'"
+            (click)="ejecutarAccionMenu('cosecha')">
+            <span class="act-ico ico-amber"><ion-icon name="leaf-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Registrar Cosecha</strong>
+              <small>Confirmar fecha real de cosecha</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+
+          <button
+            type="button"
+            class="act-btn"
+            (click)="ejecutarAccionMenu('estado')">
+            <span class="act-ico ico-blue"><ion-icon name="pulse-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Cambiar Estado Fenológico</strong>
+              <small>Actualizar etapa de desarrollo</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+
+          <button
+            type="button"
+            class="act-btn"
+            (click)="ejecutarAccionMenu('editar')">
+            <span class="act-ico ico-green"><ion-icon name="create-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Editar Cultivo</strong>
+              <small>Modificar datos y registro SENASA</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+
+          <button
+            type="button"
+            class="act-btn danger"
+            (click)="ejecutarAccionMenu('eliminar')">
+            <span class="act-ico ico-red"><ion-icon name="trash-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Eliminar Cultivo</strong>
+              <small>Dar de baja validando RENSPA</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+        </div>
+
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="danger"
+          shape="round"
+          style="margin: 10px 0 0; --border-width: 1.5px; --background: #fef2f2; font-weight: 600;"
+          (click)="cerrarMenuAcciones()">
+          <ion-icon slot="start" name="close"></ion-icon>
+          Cerrar
+        </ion-button>
+      </div>
+    </ng-template>
+  </ion-modal>
+
   <!-- MODAL 1: Registrar Cosecha -->
   <ion-modal
     [isOpen]="isModalCosechaOpen"

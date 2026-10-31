@@ -19,7 +19,6 @@ import {
   IonSelect,
   IonSelectOption,
   IonToggle,
-  IonChip,
   IonButton,
   IonIcon,
   IonSpinner,
@@ -71,7 +70,6 @@ import { Lot } from '../../../../core/models/lot.model';
     IonSelect,
     IonSelectOption,
     IonToggle,
-    IonChip,
     IonButton,
     IonIcon,
     IonSpinner,
@@ -103,7 +101,17 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
   mensajeError = '';
 
   tiposCultivo = TYPE_CROP_OPTIONS;
-  especiesSugeridas = ['Vid', 'Nogal', 'Olivo', 'Almendro', 'Pistacho', 'Ciruelo', 'Durazno'];
+  private readonly especiesPorTipo: Record<TypeCrop, string[]> = {
+    FRUIT: ['Vid', 'Nogal', 'Olivo', 'Almendro', 'Pistacho', 'Ciruelo', 'Durazno', 'Limonero', 'Naranjo'],
+    CEREAL: ['Maíz', 'Trigo', 'Cebada', 'Avena', 'Sorgo', 'Centeno'],
+    OILSEED: ['Soja', 'Girasol', 'Maní', 'Colza'],
+    FORAGE: ['Alfalfa', 'Avena Forrajera', 'Ryegrass', 'Trébol', 'Festuca'],
+    HORTICULTURAL: ['Tomate', 'Ajo', 'Cebolla', 'Papa', 'Zapallo', 'Pimiento'],
+    INDUSTRIAL: ['Algodón', 'Caña de Azúcar', 'Tabaco', 'Lavanda'],
+  };
+  especiesFiltradas: string[] = [];
+  mostrarSugerenciasEspecie = false;
+  private blurTimeout: ReturnType<typeof setTimeout> | null = null;
   lotesAgricolas: Lot[] = [];
   loteSeleccionado: Lot | null = null;
   tieneLoteOriginal = false;
@@ -221,9 +229,64 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
       });
   }
 
+  onEspecieFocus() {
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
+    this.mostrarSugerenciasEspecie = true;
+    this.actualizarSugerenciasEspecie();
+  }
+
+  onEspecieInput(event: any) {
+    this.especie = event?.detail?.value ?? '';
+    this.mostrarSugerenciasEspecie = true;
+    this.actualizarSugerenciasEspecie();
+  }
+
+  onEspecieBlur() {
+    if (this.blurTimeout) clearTimeout(this.blurTimeout);
+    this.blurTimeout = setTimeout(() => {
+      this.mostrarSugerenciasEspecie = false;
+      this.cdr.detectChanges();
+    }, 150);
+  }
+
   seleccionarEspecieSugerida(sp: string) {
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
     this.especie = sp;
+    this.mostrarSugerenciasEspecie = false;
+    this.especiesFiltradas = [];
     this.cdr.detectChanges();
+  }
+
+  actualizarSugerenciasEspecie() {
+    const norm = (s: string) =>
+      (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+    const term = norm(this.especie);
+    const base = this.especiesPorTipo[this.typeCrop] || this.especiesPorTipo.FRUIT;
+
+    if (!term) {
+      this.especiesFiltradas = base.slice(0, 6);
+      return;
+    }
+
+    const todas = Array.from(new Set([...base, ...Object.values(this.especiesPorTipo).flat()]));
+    const coincidencias = todas.filter((sp) => {
+      const n = norm(sp);
+      return n.includes(term) && n !== term;
+    });
+
+    coincidencias.sort((a, b) => {
+      const aStarts = norm(a).startsWith(term) ? 0 : 1;
+      const bStarts = norm(b).startsWith(term) ? 0 : 1;
+      return aStarts - bStarts;
+    });
+
+    this.especiesFiltradas = coincidencias.slice(0, 6);
   }
 
   onLoteChange(event: any) {
@@ -408,6 +471,10 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.blurTimeout) {
+      clearTimeout(this.blurTimeout);
+      this.blurTimeout = null;
+    }
     if (this.mapTimeout) {
       clearTimeout(this.mapTimeout);
       this.mapTimeout = null;

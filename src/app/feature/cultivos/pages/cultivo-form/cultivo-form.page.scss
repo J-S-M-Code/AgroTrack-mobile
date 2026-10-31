@@ -13,8 +13,18 @@
 .clean-list { padding: 0; background: transparent; }
 .clean-list ion-item { --padding-start: 0; --inner-padding-end: 0; --background: transparent; }
 
-.species-chips { display: flex; gap: 6px; overflow-x: auto; padding: 8px 0 4px; }
-.species-chips ion-chip { margin: 0; height: 28px; font-size: 0.76rem; flex-shrink: 0; }
+.autocomplete-anchor { position: relative; height: 0; z-index: 30; }
+.species-dropdown {
+  position: absolute; top: 2px; left: 0; right: 0; max-height: 184px; overflow-y: auto;
+  background: #fff; border: 1px solid #cbd5e1; border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12); padding: 4px;
+}
+.species-option {
+  width: 100%; display: flex; align-items: center; gap: 8px; border: 0; background: transparent;
+  padding: 9px 10px; border-radius: 7px; font-size: 0.9rem; color: #1e293b; text-align: left;
+}
+.species-option:active { background: #e6f4ea; color: var(--ion-color-primary); }
+.species-option ion-icon { color: var(--ion-color-primary); font-size: 1rem; flex-shrink: 0; }
 
 .perennial-item { margin-top: 6px; }
 .toggle-sub { margin: 2px 0 0; font-size: 0.76rem; color: #64748b; font-weight: 400; }
