@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { 
   IonHeader, IonToolbar, IonButtons, IonMenuButton, IonTitle, 
@@ -15,7 +16,7 @@ import {
   layers, analyticsOutline, optionsOutline, checkmarkOutline, close, closeOutline,
   scanOutline, prismOutline, earthOutline, shapesOutline, squareOutline,
   ellipseOutline, arrowUndoOutline, refreshOutline, checkmarkCircle,
-  pawOutline, layersOutline
+  pawOutline, layersOutline, leafOutline, addOutline
 } from 'ionicons/icons';
 
 import * as L from 'leaflet';
@@ -24,11 +25,13 @@ import '@geoman-io/leaflet-geoman-free';
 import { ContextService } from '../../core/services/context.service';
 import { LotService } from '../../core/services/lot.service';
 import { SpectralMapService } from '../../core/services/spectral-map.service';
+import { CropService } from '../../core/services/crop.service';
 import { environment } from '../../../environments/environment';
 
 import { Finca } from '../../core/models/finca.model';
 import { Lot } from '../../core/models/lot.model';
 import { SpectralMap } from '../../core/models/spectral-map.model';
+import { Cultivo } from '../../core/models/cultivo.model';
 
 @Component({
   selector: 'app-mapa',
@@ -48,6 +51,8 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
   contextService = inject(ContextService);
   lotService = inject(LotService);
   spectralMapService = inject(SpectralMapService);
+  cropService = inject(CropService);
+  router = inject(Router);
   cdr = inject(ChangeDetectorRef);
 
   private destroy$ = new Subject<void>();
@@ -57,6 +62,7 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
 
   private map: L.Map | undefined;
   fincaActiva: Finca | null = null;
+  userRole = '';
   
   // Capas
   private capaFondoSatelite!: L.TileLayer;
@@ -75,6 +81,7 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
   
   // Datos
   lotes: Lot[] = [];
+  cultivosFinca: Cultivo[] = [];
   mapasDisponibles: SpectralMap[] = [];
   indicesDisponibles: string[] = [];
   
@@ -118,11 +125,35 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
       layers, analyticsOutline, optionsOutline, checkmarkOutline, close, closeOutline,
       scanOutline, prismOutline, earthOutline, shapesOutline, squareOutline,
       ellipseOutline, arrowUndoOutline, refreshOutline, checkmarkCircle,
-      pawOutline, layersOutline
+      pawOutline, layersOutline, leafOutline, addOutline
     });
   }
 
+  get canManageCrops(): boolean {
+    return ['OWNER', 'FOREMAN', 'AGRONOMIST'].includes(this.userRole);
+  }
+
+  get cultivoDelLoteSeleccionado(): Cultivo | null {
+    if (!this.selectedLote?.id) return null;
+    return (
+      this.cultivosFinca.find(
+        c => (c.loteId === this.selectedLote!.id || c.lote === this.selectedLote!.name) && c.phenologicalState !== 'HARVESTED'
+      ) ||
+      this.cultivosFinca.find(
+        c => c.loteId === this.selectedLote!.id || c.lote === this.selectedLote!.name
+      ) ||
+      null
+    );
+  }
+
   ngOnInit() {
+    this.contextService.userRole$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(role => {
+        this.userRole = role || '';
+        this.cdr.detectChanges();
+      });
+
     this.contextService.selectedFarm$
       .pipe(takeUntil(this.destroy$))
       .subscribe(farm => {
@@ -144,6 +175,9 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
 
   ionViewDidEnter() {
     this.isViewActive = true;
+    if (this.fincaActiva?.id) {
+      this.cargarCultivosDeFinca(this.fincaActiva.id);
+    }
     if (!this.map) {
       this.initMap();
     } else {
@@ -185,6 +219,7 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
     this.mapasDisponibles = [];
     this.indicesDisponibles = [];
     this.lotes = [];
+    this.cultivosFinca = [];
     if (this.isMapReady()) {
       this.lotesGroup.clearLayers();
       if (this.fincaPolygonLayer) {
@@ -232,6 +267,39 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
           this.cdr.detectChanges();
         }
       });
+
+    this.cargarCultivosDeFinca(farmId);
+  }
+
+  private cargarCultivosDeFinca(farmId: string) {
+    this.cropService.getCropsByFarm(farmId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (crops) => {
+          if (this.fincaActiva?.id !== farmId) return;
+          this.cultivosFinca = crops;
+          this.cdr.detectChanges();
+        },
+        error: () => {
+          this.cultivosFinca = [];
+        }
+      });
+  }
+
+  irADetalleCultivoDesdeLote(cultivoId: string) {
+    if (!cultivoId) return;
+    this.isLoteInfoOpen = false;
+    setTimeout(() => {
+      this.router.navigate(['/cultivos', cultivoId]);
+    }, 80);
+  }
+
+  irACrearCultivoEnLote(lotId?: string) {
+    if (!lotId) return;
+    this.isLoteInfoOpen = false;
+    setTimeout(() => {
+      this.router.navigate(['/cultivos/nuevo'], { queryParams: { lotId } });
+    }, 80);
   }
 
   private initMap() {

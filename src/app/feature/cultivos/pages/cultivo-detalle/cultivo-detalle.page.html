@@ -1,0 +1,458 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/cultivos" text=""></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>{{ cultivo ? cultivo.especie : 'Detalle de Cultivo' }}</ion-title>
+
+    <ion-buttons slot="end" *ngIf="cultivo && canManageCrops">
+      <ion-button (click)="abrirMenuAcciones()" aria-label="Opciones del cultivo">
+        <ion-icon slot="icon-only" name="ellipsis-vertical"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingSpinner="crescent">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Cargando -->
+  <div class="state-box" *ngIf="isLoading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>Cargando información del cultivo...</p>
+  </div>
+
+  <!-- Error -->
+  <div class="state-box" *ngIf="!isLoading && errorMessage">
+    <div class="state-icon-circle danger">
+      <ion-icon name="warning-outline"></ion-icon>
+    </div>
+    <h3>No disponible</h3>
+    <p>{{ errorMessage }}</p>
+    <ion-button fill="outline" color="primary" (click)="cargarTodo(true)">
+      <ion-icon slot="start" name="refresh-outline"></ion-icon>
+      Reintentar
+    </ion-button>
+  </div>
+
+  <!-- Contenido Principal del Detalle -->
+  <div class="detail-body" *ngIf="!isLoading && !errorMessage && cultivo">
+    <!-- 1. Cabecera / Resumen del Cultivo -->
+    <ion-card class="section-card hero-card">
+      <ion-card-content class="card-pad">
+        <div class="hero-header">
+          <div>
+            <h2 class="crop-title">{{ cultivo.especie }}</h2>
+            <p class="crop-variety">Variedad: <strong>{{ cultivo.variedad }}</strong></p>
+          </div>
+          <span class="state-pill" [ngClass]="getEstadoClass(cultivo.phenologicalState)">
+            {{ cultivo.estado }}
+          </span>
+        </div>
+
+        <div class="badges-row">
+          <span class="info-chip" [class.unassigned]="!cultivo.lote">
+            <ion-icon name="location-outline"></ion-icon>
+            {{ cultivo.lote || 'Sin lote asignado' }}
+          </span>
+
+          <span class="info-chip perennial" *ngIf="cultivo.isPerennial">
+            <ion-icon name="sync-outline"></ion-icon>
+            Ciclo Perenne
+          </span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 2. Registro Productor (SENASA) -->
+    <ion-card class="section-card">
+      <ion-card-content class="card-pad">
+        <h3 class="card-section-title">
+          <ion-icon name="document-text-outline"></ion-icon>
+          Registro Productor (SENASA)
+        </h3>
+
+        <div class="kv-list">
+          <div class="kv-row">
+            <span>Nº RENSPA</span>
+            <strong>{{ cultivo.renspa || 'No especificado' }}</strong>
+          </div>
+          <div class="kv-row">
+            <span>Tipo de Cultivo</span>
+            <strong>{{ cultivo.tipoCultivoLabel }}</strong>
+          </div>
+          <div class="kv-row">
+            <span>Superficie Implantada</span>
+            <strong>{{ cultivo.hectareas | number:'1.0-2' }} Hectáreas</strong>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 3. Ciclo del Cultivo -->
+    <ion-card class="section-card">
+      <ion-card-content class="card-pad">
+        <h3 class="card-section-title">
+          <ion-icon name="calendar-outline"></ion-icon>
+          Ciclo del Cultivo
+        </h3>
+
+        <div class="timeline-box">
+          <div class="time-point">
+            <span class="dot green"></span>
+            <div class="time-info">
+              <span>Plantación / Siembra</span>
+              <strong>{{ cultivo.fechaPlantacion | date:'dd/MM/yyyy' }}</strong>
+            </div>
+          </div>
+
+          <div class="time-connector"></div>
+
+          <div class="time-point">
+            <span class="dot amber"></span>
+            <div class="time-info">
+              <span>Cosecha Estimada</span>
+              <strong>{{ cultivo.fechaCosecha | date:'dd/MM/yyyy' }}</strong>
+            </div>
+          </div>
+        </div>
+
+        <div class="progress-row">
+          <ion-progress-bar
+            [value]="calcularProgreso(cultivo.fechaPlantacion, cultivo.fechaCosecha) / 100"
+            color="primary">
+          </ion-progress-bar>
+          <span>{{ calcularProgreso(cultivo.fechaPlantacion, cultivo.fechaCosecha) }}%</span>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 4. Cuaderno de Campo -->
+    <ion-card class="section-card">
+      <ion-card-content class="card-pad">
+        <h3 class="card-section-title">
+          <ion-icon name="book-outline"></ion-icon>
+          Cuaderno de Campo
+        </h3>
+
+        <ion-segment
+          class="events-segment"
+          [scrollable]="true"
+          [value]="filtroEventos"
+          (ionChange)="onSegmentEventosChange($event)">
+          <ion-segment-button value="Todos"><ion-label>Todos</ion-label></ion-segment-button>
+          <ion-segment-button value="Alerta"><ion-label>Alertas</ion-label></ion-segment-button>
+          <ion-segment-button value="Tarea"><ion-label>Tareas</ion-label></ion-segment-button>
+          <ion-segment-button value="Comentario"><ion-label>Comentarios</ion-label></ion-segment-button>
+        </ion-segment>
+
+        <div class="events-list" *ngIf="eventosFiltrados.length > 0; else emptyEvents">
+          <div
+            class="event-item"
+            *ngFor="let ev of eventosFiltrados"
+            [ngClass]="ev.tipo.toLowerCase()">
+            <ion-icon class="event-icon" [name]="getIconoEvento(ev.tipo)"></ion-icon>
+            <div class="event-body">
+              <div class="event-meta">
+                <span>{{ ev.fecha | date:'dd/MM/yy HH:mm' }}</span>
+                <span><ion-icon name="person-outline"></ion-icon> {{ ev.autor }}</span>
+              </div>
+              <p>{{ ev.descripcion }}</p>
+            </div>
+          </div>
+        </div>
+
+        <ng-template #emptyEvents>
+          <div class="inline-empty">No hay registros en el cuaderno para este filtro.</div>
+        </ng-template>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 5. Análisis Satelital del Lote -->
+    <ion-card class="section-card">
+      <ion-card-content class="card-pad">
+        <h3 class="card-section-title">
+          <ion-icon name="layers-outline"></ion-icon>
+          Análisis Satelital del Lote
+        </h3>
+
+        <ng-container *ngIf="cultivo.loteId; else noLotAssigned">
+          <!-- Selector horizontal de capas e índices espectrales -->
+          <div class="layer-pills" *ngIf="loteAsignado?.polygon?.length">
+            <button
+              type="button"
+              class="layer-btn"
+              [class.active]="capaActiva === 'Normal'"
+              (click)="cambiarCapa('Normal')">
+              <ion-icon name="eye-outline"></ion-icon> Normal
+            </button>
+
+            <button
+              type="button"
+              class="layer-btn"
+              *ngFor="let indice of indicesDisponibles"
+              [class.active]="capaActiva === indice"
+              (click)="cambiarCapa(indice)">
+              {{ indice }}
+            </button>
+          </div>
+
+          <div class="map-box" *ngIf="loteAsignado?.polygon?.length; else emptyPolygon">
+            <div id="mapa-cultivo" class="detail-map"></div>
+
+            <div class="map-legend" *ngIf="capaActiva !== 'Normal'">
+              <strong>Índice activo: {{ capaActiva }}</strong>
+              <span>Recorte espectral aplicado sobre {{ cultivo.lote }}</span>
+            </div>
+          </div>
+
+          <ng-template #emptyPolygon>
+            <div class="inline-empty">Cargando geometría satelital del lote...</div>
+          </ng-template>
+        </ng-container>
+
+        <ng-template #noLotAssigned>
+          <div class="inline-empty">
+            Este cultivo no posee un lote físico asignado para visualizar análisis satelital.
+          </div>
+        </ng-template>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- MODAL 0: Menú de Opciones del Cultivo (⋮) -->
+  <ion-modal
+    style="--height: auto;"
+    [isOpen]="isMenuAccionesOpen"
+    (didDismiss)="onMenuAccionesDismiss()"
+    [initialBreakpoint]="1"
+    [breakpoints]="[0, 1]">
+    <ng-template>
+      <div *ngIf="cultivo" style="padding: 20px 16px calc(12px + env(safe-area-inset-bottom, 0px)); background: #fff;">
+        <div style="text-align: center; font-size: 0.92rem; color: #64748b; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid #f1f5f9;">
+          Nº RENSPA: <strong style="color: #1e293b;">{{ cultivo.renspa || 'No especificado' }}</strong>
+        </div>
+
+        <div class="act-list">
+          <button
+            type="button"
+            class="act-btn"
+            *ngIf="cultivo.phenologicalState !== 'HARVESTED'"
+            (click)="ejecutarAccionMenu('cosecha')">
+            <span class="act-ico ico-amber"><ion-icon name="leaf-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Registrar Cosecha</strong>
+              <small>Confirmar fecha real de cosecha</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+
+          <button
+            type="button"
+            class="act-btn"
+            (click)="ejecutarAccionMenu('estado')">
+            <span class="act-ico ico-blue"><ion-icon name="pulse-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Cambiar Estado Fenológico</strong>
+              <small>Actualizar etapa de desarrollo</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+
+          <button
+            type="button"
+            class="act-btn"
+            (click)="ejecutarAccionMenu('editar')">
+            <span class="act-ico ico-green"><ion-icon name="create-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Editar Cultivo</strong>
+              <small>Modificar datos y registro SENASA</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+
+          <button
+            type="button"
+            class="act-btn danger"
+            (click)="ejecutarAccionMenu('eliminar')">
+            <span class="act-ico ico-red"><ion-icon name="trash-outline"></ion-icon></span>
+            <span class="act-txt">
+              <strong>Eliminar Cultivo</strong>
+              <small>Dar de baja validando RENSPA</small>
+            </span>
+            <ion-icon class="act-arr" name="chevron-forward-outline"></ion-icon>
+          </button>
+        </div>
+
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="danger"
+          shape="round"
+          style="margin: 10px 0 0; --border-width: 1.5px; --background: #fef2f2; font-weight: 600;"
+          (click)="cerrarMenuAcciones()">
+          <ion-icon slot="start" name="close"></ion-icon>
+          Cerrar
+        </ion-button>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL 1: Registrar Cosecha -->
+  <ion-modal
+    [isOpen]="isModalCosechaOpen"
+    (didDismiss)="cerrarModalCosecha()"
+    [initialBreakpoint]="0.58"
+    [breakpoints]="[0, 0.58, 0.85]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title class="modal-title">Registrar Cosecha</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" [disabled]="guardandoAccion" (click)="cerrarModalCosecha()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" *ngIf="cultivo">
+        <p class="modal-desc">
+          Confirma la fecha efectiva de cosecha. Fecha estimada actual:
+          <strong>{{ cultivo.fechaCosecha | date:'dd/MM/yyyy' }}</strong>.
+        </p>
+
+        <div class="info-note" *ngIf="cultivo.isPerennial">
+          Al ser un cultivo <strong>perenne</strong>, pasará nuevamente a <em>Crecimiento Vegetativo</em> y se programará el próximo ciclo anual.
+        </div>
+
+        <div class="error-banner" *ngIf="errorCosecha">{{ errorCosecha }}</div>
+
+        <ion-list class="modal-form-list">
+          <ion-item>
+            <ion-label position="stacked">Fecha Real de Cosecha *</ion-label>
+            <input
+              type="date"
+              class="native-date-input"
+              [(ngModel)]="fechaCosechaSeleccionada" />
+          </ion-item>
+        </ion-list>
+
+        <div class="modal-footer-btns">
+          <ion-button expand="block" fill="outline" color="medium" [disabled]="guardandoAccion" (click)="cerrarModalCosecha()">
+            Cancelar
+          </ion-button>
+          <ion-button expand="block" color="primary" [disabled]="!fechaCosechaSeleccionada || guardandoAccion" (click)="confirmarCosecha()">
+            {{ guardandoAccion ? 'Registrando...' : 'Confirmar Cosecha' }}
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL 2: Cambiar Estado Fenológico -->
+  <ion-modal
+    [isOpen]="isModalEstadoOpen"
+    (didDismiss)="cerrarModalEstado()"
+    [initialBreakpoint]="0.64"
+    [breakpoints]="[0, 0.64, 0.85]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title class="modal-title">Estado Fenológico</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" [disabled]="guardandoAccion" (click)="cerrarModalEstado()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" *ngIf="cultivo">
+        <p class="modal-desc">Selecciona la etapa actual de desarrollo del cultivo.</p>
+        <div class="error-banner" *ngIf="errorEstado">{{ errorEstado }}</div>
+
+        <ion-list class="modal-form-list">
+          <ion-radio-group [(ngModel)]="nuevoEstadoSeleccionado">
+            <ion-item *ngFor="let est of estadosDisponibles">
+              <ion-radio [value]="est.value" justify="space-between">{{ est.label }}</ion-radio>
+            </ion-item>
+          </ion-radio-group>
+        </ion-list>
+
+        <div class="modal-footer-btns">
+          <ion-button
+            expand="block"
+            color="primary"
+            [disabled]="guardandoAccion || nuevoEstadoSeleccionado === cultivo.phenologicalState"
+            (click)="confirmarCambioEstado()">
+            {{ guardandoAccion ? 'Actualizando...' : 'Guardar Estado' }}
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL 3: Eliminar Cultivo (Confirmación RENSPA + Motivo) -->
+  <ion-modal
+    [isOpen]="isModalEliminarOpen"
+    (didDismiss)="cerrarModalEliminar()"
+    [initialBreakpoint]="0.75"
+    [breakpoints]="[0, 0.75, 0.95]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title class="modal-title danger-title">Eliminar Cultivo</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" [disabled]="guardandoAccion" (click)="cerrarModalEliminar()">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding" *ngIf="cultivo">
+        <p class="modal-desc">
+          Esta acción dará de baja el cultivo conservando su historial. Escribe
+          <strong>{{ valorConfirmacionRequerido }}</strong> para confirmar.
+        </p>
+
+        <div class="error-banner" *ngIf="errorEliminar">{{ errorEliminar }}</div>
+
+        <ion-list class="modal-form-list">
+          <ion-item>
+            <ion-input
+              label="Confirmar Nº RENSPA *"
+              labelPlacement="stacked"
+              [placeholder]="valorConfirmacionRequerido"
+              [(ngModel)]="renspaConfirmacion">
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-textarea
+              label="Motivo de la baja (Obligatorio) *"
+              labelPlacement="stacked"
+              rows="3"
+              placeholder="Ej: Fin de ciclo productivo, daño climático, enfermedad..."
+              [(ngModel)]="motivoEliminacion">
+            </ion-textarea>
+          </ion-item>
+        </ion-list>
+
+        <div class="modal-footer-btns">
+          <ion-button expand="block" fill="outline" color="medium" [disabled]="guardandoAccion" (click)="cerrarModalEliminar()">
+            Cancelar
+          </ion-button>
+          <ion-button expand="block" color="danger" [disabled]="!isEliminacionValida || guardandoAccion" (click)="confirmarEliminacion()">
+            {{ guardandoAccion ? 'Eliminando...' : 'Eliminar Cultivo' }}
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

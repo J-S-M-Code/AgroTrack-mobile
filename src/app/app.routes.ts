@@ -21,5 +21,25 @@ export const routes: Routes = [
     path: 'mapa',
     loadComponent: () => import('./feature/mapa/mapa.page').then(m => m.MapaPage),
     canActivate: [authGuard]
+  },
+  {
+    path: 'cultivos',
+    loadComponent: () => import('./feature/cultivos/cultivos.page').then(m => m.CultivosPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'cultivos/nuevo',
+    loadComponent: () => import('./feature/cultivos/pages/cultivo-form/cultivo-form.page').then(m => m.CultivoFormPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'cultivos/editar/:id',
+    loadComponent: () => import('./feature/cultivos/pages/cultivo-form/cultivo-form.page').then(m => m.CultivoFormPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'cultivos/:id',
+    loadComponent: () => import('./feature/cultivos/pages/cultivo-detalle/cultivo-detalle.page').then(m => m.CultivoDetallePage),
+    canActivate: [authGuard]
   }
 ];
