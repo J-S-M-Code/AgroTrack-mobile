@@ -1,6 +1,6 @@
 # Spec 06: Módulo de Novedades, Sensores (Cámara y GPS) y Tiempo Real
 
-**Status:** Review  
+**Status:** Finished  
 **Date:** 2026-10-31  
 **Completed Date:** 2026-11-06  
 **Target Branch:** `feature/alerts`
