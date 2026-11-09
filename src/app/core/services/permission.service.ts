@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { AlertController, ToastController } from '@ionic/angular';
 import { Geolocation } from '@capacitor/geolocation';
 import { Camera } from '@capacitor/camera';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { Capacitor } from '@capacitor/core';
 
 @Injectable({
@@ -109,6 +110,28 @@ export class PermissionService {
       return false;
     } catch (err) {
       console.warn('Error verificando permisos de cámara:', err);
+      return false;
+    }
+  }
+
+  /**
+   * Solicita y valida el permiso de notificaciones locales (Android 13+).
+   */
+  async ensureNotificationPermission(): Promise<boolean> {
+    if (!Capacitor.isNativePlatform()) {
+      return false;
+    }
+
+    try {
+      const check = await LocalNotifications.checkPermissions();
+      if (check.display === 'granted') {
+        return true;
+      }
+
+      const req = await LocalNotifications.requestPermissions();
+      return req.display === 'granted';
+    } catch (err) {
+      console.warn('Error verificando permisos de notificaciones:', err);
       return false;
     }
   }

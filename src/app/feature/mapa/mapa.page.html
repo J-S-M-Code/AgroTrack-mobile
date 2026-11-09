@@ -296,6 +296,17 @@
           Reportar Novedad en este Lote
         </ion-button>
 
+        <ion-button
+          *ngIf="selectedLote?.id && canCreateTasks"
+          expand="block"
+          fill="outline"
+          color="secondary"
+          class="ion-margin-top"
+          (click)="irAAsignarTareaEnLote(selectedLote.id)">
+          <ion-icon name="clipboard-outline" slot="start"></ion-icon>
+          Asignar Tarea en este Lote
+        </ion-button>
+
         <!-- Aquí se redirigiría a la vista del lote específico (ej. app/lotes/:id) -->
         <ion-button expand="block" class="ion-margin-top ion-margin-bottom" color="primary">
           Ver Detalles Completos

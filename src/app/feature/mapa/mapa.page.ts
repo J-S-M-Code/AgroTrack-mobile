@@ -16,7 +16,7 @@ import {
   layers, analyticsOutline, optionsOutline, checkmarkOutline, close, closeOutline,
   scanOutline, prismOutline, earthOutline, shapesOutline, squareOutline,
   ellipseOutline, arrowUndoOutline, refreshOutline, checkmarkCircle,
-  pawOutline, layersOutline, leafOutline, addOutline, warningOutline
+  pawOutline, layersOutline, leafOutline, addOutline, warningOutline, clipboardOutline
 } from 'ionicons/icons';
 
 import * as L from 'leaflet';
@@ -125,8 +125,12 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
       layers, analyticsOutline, optionsOutline, checkmarkOutline, close, closeOutline,
       scanOutline, prismOutline, earthOutline, shapesOutline, squareOutline,
       ellipseOutline, arrowUndoOutline, refreshOutline, checkmarkCircle,
-      pawOutline, layersOutline, leafOutline, addOutline, warningOutline
+      pawOutline, layersOutline, leafOutline, addOutline, warningOutline, clipboardOutline
     });
+  }
+
+  get canCreateTasks(): boolean {
+    return ['OWNER', 'FOREMAN', 'AGRONOMIST', 'VETERINARIAN'].includes(this.userRole);
   }
 
   get canManageCrops(): boolean {
@@ -307,6 +311,14 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
     this.isLoteInfoOpen = false;
     setTimeout(() => {
       this.router.navigate(['/novedades/nueva'], { queryParams: { lotId } });
+    }, 80);
+  }
+
+  irAAsignarTareaEnLote(lotId?: string) {
+    if (!lotId) return;
+    this.isLoteInfoOpen = false;
+    setTimeout(() => {
+      this.router.navigate(['/tareas/nueva'], { queryParams: { lotId } });
     }, 80);
   }
 

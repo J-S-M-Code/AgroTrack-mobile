@@ -49,9 +49,12 @@
               </ion-badge>
             </ion-item>
 
-            <ion-item button>
+            <ion-item button routerLink="/tareas" routerDirection="root">
               <ion-icon slot="start" name="clipboard-outline"></ion-icon>
               <ion-label>Tareas</ion-label>
+              <ion-badge slot="end" color="primary" *ngIf="(notificationService.unreadTasksCount$ | async) as unreadTasks">
+                {{ unreadTasks }}
+              </ion-badge>
             </ion-item>
 
             <ng-container *ngIf="(contextService.userRole$ | async) !== 'WORKER' && (contextService.userRole$ | async) !== 'APPLICATOR' && (contextService.userRole$ | async) !== 'VETERINARIAN'">

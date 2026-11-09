@@ -25,7 +25,7 @@ export class WebsocketService implements OnDestroy {
     this.rxStomp.configure({
       webSocketFactory: () => new SockJS(environment.wsUrl),
       beforeConnect: async (client: RxStomp) => {
-        const token = await this.authService.getToken();
+        const token = await this.authService.refreshTokenIfNeeded();
         client.stompClient.connectHeaders = {
           Authorization: token ? `Bearer ${token}` : '',
         };
@@ -56,6 +56,12 @@ export class WebsocketService implements OnDestroy {
 
   watchAlerts(farmId: string): Observable<any> {
     return this.rxStomp.watch(`/topic/farms/${farmId}/alerts`).pipe(
+      map((message) => JSON.parse(message.body))
+    );
+  }
+
+  watchTasks(farmId: string): Observable<any> {
+    return this.rxStomp.watch(`/topic/farms/${farmId}/tasks`).pipe(
       map((message) => JSON.parse(message.body))
     );
   }

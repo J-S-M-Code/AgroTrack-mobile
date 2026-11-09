@@ -56,5 +56,20 @@ export const routes: Routes = [
     path: 'novedades/:id',
     loadComponent: () => import('./feature/novedades/pages/novedad-detalle/novedad-detalle.page').then(m => m.NovedadDetallePage),
     canActivate: [authGuard]
+  },
+  {
+    path: 'tareas',
+    loadComponent: () => import('./feature/tareas/tareas.page').then(m => m.TareasPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'tareas/nueva',
+    loadComponent: () => import('./feature/tareas/pages/tarea-form/tarea-form.page').then(m => m.TareaFormPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'tareas/:id',
+    loadComponent: () => import('./feature/tareas/pages/tarea-detalle/tarea-detalle.page').then(m => m.TareaDetallePage),
+    canActivate: [authGuard]
   }
 ];
