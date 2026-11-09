@@ -10,8 +10,9 @@
       <!-- Icono de Notificaciones -->
       <ion-button>
         <ion-icon slot="icon-only" name="notifications-outline"></ion-icon>
-        <!-- Badge de ejemplo -->
-        <ion-badge color="danger" class="notification-badge">2</ion-badge>
+        <ion-badge color="danger" class="notification-badge" *ngIf="(notificationService.unreadCount$ | async) as unread">
+          {{ unread }}
+        </ion-badge>
       </ion-button>
       
       <!-- Avatar de Perfil -->

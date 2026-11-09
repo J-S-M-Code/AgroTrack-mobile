@@ -1,0 +1,25 @@
+.menu-brand-header {
+  display: flex;
+  align-items: center;
+  padding: 4px 8px;
+
+  .menu-brand-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    margin-left: 6px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  ion-title {
+    padding-left: 8px;
+    font-weight: 700;
+  }
+
+  .beta-badge {
+    vertical-align: middle;
+    margin-left: 5px;
+    font-size: 0.7rem;
+  }
+}

@@ -16,7 +16,7 @@ import {
   layers, analyticsOutline, optionsOutline, checkmarkOutline, close, closeOutline,
   scanOutline, prismOutline, earthOutline, shapesOutline, squareOutline,
   ellipseOutline, arrowUndoOutline, refreshOutline, checkmarkCircle,
-  pawOutline, layersOutline, leafOutline, addOutline
+  pawOutline, layersOutline, leafOutline, addOutline, warningOutline
 } from 'ionicons/icons';
 
 import * as L from 'leaflet';
@@ -125,7 +125,7 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
       layers, analyticsOutline, optionsOutline, checkmarkOutline, close, closeOutline,
       scanOutline, prismOutline, earthOutline, shapesOutline, squareOutline,
       ellipseOutline, arrowUndoOutline, refreshOutline, checkmarkCircle,
-      pawOutline, layersOutline, leafOutline, addOutline
+      pawOutline, layersOutline, leafOutline, addOutline, warningOutline
     });
   }
 
@@ -302,6 +302,14 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
     }, 80);
   }
 
+  irAReportarNovedadEnLote(lotId?: string) {
+    if (!lotId) return;
+    this.isLoteInfoOpen = false;
+    setTimeout(() => {
+      this.router.navigate(['/novedades/nueva'], { queryParams: { lotId } });
+    }, 80);
+  }
+
   private initMap() {
     const mapElement = document.getElementById('main-map');
     if (!mapElement) return;
@@ -332,8 +340,8 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
       zoomControl: false
     });
 
-    // Capa Satélite Google (igual a la web)
-    this.capaFondoSatelite = L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+    // Capa Satélite Google (igual a la web pero en HTTPS para evitar bloqueo de Mixed Content en WebView)
+    this.capaFondoSatelite = L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
       maxZoom: 22,
       maxNativeZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3']

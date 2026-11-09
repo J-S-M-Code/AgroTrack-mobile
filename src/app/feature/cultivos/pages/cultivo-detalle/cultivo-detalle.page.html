@@ -134,10 +134,15 @@
     <!-- 4. Cuaderno de Campo -->
     <ion-card class="section-card">
       <ion-card-content class="card-pad">
-        <h3 class="card-section-title">
-          <ion-icon name="book-outline"></ion-icon>
-          Cuaderno de Campo
-        </h3>
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px;">
+          <h3 class="card-section-title" style="margin: 0;">
+            <ion-icon name="book-outline"></ion-icon>
+            Cuaderno de Campo
+          </h3>
+          <ion-button size="small" fill="outline" color="primary" (click)="irARegistrarNovedadCultivo()">
+            + Novedad
+          </ion-button>
+        </div>
 
         <ion-segment
           class="events-segment"
@@ -154,7 +159,8 @@
           <div
             class="event-item"
             *ngFor="let ev of eventosFiltrados"
-            [ngClass]="ev.tipo.toLowerCase()">
+            [ngClass]="ev.tipo.toLowerCase()"
+            (click)="verEventoCampo(ev)">
             <ion-icon class="event-icon" [name]="getIconoEvento(ev.tipo)"></ion-icon>
             <div class="event-body">
               <div class="event-meta">

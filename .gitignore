@@ -21,11 +21,13 @@ AGENTS.md
 /.versions
 /coverage
 
-# Ionic
+# Ionic & Capacitor
 /.ionic
 /www
 /platforms
 /plugins
+/android
+/ios
 
 # Compiled output
 /dist

@@ -1,7 +1,8 @@
 # Spec 06: Módulo de Novedades, Sensores (Cámara y GPS) y Tiempo Real
 
-**Status:** Draft  
+**Status:** Review  
 **Date:** 2026-10-31  
+**Completed Date:** 2026-11-06  
 **Target Branch:** `feature/alerts`
 
 ## 1. Objetivo
@@ -28,7 +29,7 @@ Implementar el módulo completo de **Centro de Novedades (`Alert`)** en la aplic
 - `alert.service.ts`:
   - `getAlertsByFarm(farmId: string)` → `GET /alerts/farm/{farmId}` (con mapeo GeoJSON `[lng, lat]` → Leaflet `[lat, lng]`).
   - `getAlertById(id: string, farmId: string)` → `GET /alerts/{id}?farmId={farmId}`.
-  - `uploadAlertImage(blob: Blob, ext: 'jpg' | 'png' | 'webp', farmId: string)` → `POST /alerts/images?farmId={farmId}` enviando `FormData` con tercer argumento obligatorio (`evidencia.${ext}`) y MIME tipado (`image/jpeg`, `image/png`, `image/webp`) sin forzar `Content-Type` en [`authInterceptor`](../../src/app/core/auth/interceptors/auth.interceptor.ts).
+  - `uploadAlertImage(blob: Blob, ext: 'jpg' | 'png' | 'webp', farmId: string)` → `POST /alerts/images?farmId={farmId}` enviando `FormData` con tercer argumento obligatorio (`evidencia_${i}.${ext}`) y MIME tipado (`image/jpeg`, `image/png`, `image/webp`) sin forzar `Content-Type` en [`authInterceptor`](../../src/app/core/auth/interceptors/auth.interceptor.ts).
   - `createAlert(alertDto: any, farmId: string)` → `POST /alerts?farmId={farmId}` enviando coordenadas en orden GeoJSON `[lng, lat]` y `createdAt` en formato `yyyy-MM-ddTHH:mm:ss` (sin `'Z'`).
   - `deleteAlert(id: string, farmId: string)` → `DELETE /alerts/{id}?farmId={farmId}`.
   - `resolveImageUrl(imagePath: string)` → Resuelve claves relativas `novedades/{farmId}/{uuid}.{ext}` contra `environment.minioBaseUrl` manteniendo retrocompatibilidad con URLs absolutas (`http://`, `https://`, `data:`, `blob:`).
@@ -46,20 +47,20 @@ Implementar el módulo completo de **Centro de Novedades (`Alert`)** en la aplic
 ### Rutas e Integraciones Globales
 - `src/app/app.routes.ts`: Registro lazy-load (`loadComponent`) de `/novedades`, `/novedades/nueva` y `/novedades/:id` protegidas por `authGuard`.
 - `src/app/app.component.html` y `src/app/home/home.page.html`: Enlace `routerLink="/novedades" routerDirection="root"` en el menú lateral contextual con `ion-badge` reactivo a `notificationService.unreadCount$` (reemplazando también el badge estático de ejemplo en `home.page.html`).
-- `src/app/feature/mapa/mapa.page.ts / .html`: Acción rápida *"Reportar Novedad"* en el Bottom Sheet **Detalle del Lote** que navega a `/novedades/nueva?lotId={selectedLote.id}`.
-- `src/app/feature/cultivos/pages/cultivo-detalle/cultivo-detalle.page.ts / .html`: Botón contextual *"Registrar Novedad"* en la sección **Cuaderno de Campo** que navega a `/novedades/nueva?cropId={cultivo.id}`, e integración de las novedades vinculadas al cultivo (`relatedCropId`) dentro del Cuaderno de Campo.
+- `src/app/feature/mapa/mapa.page.ts / .html`: Acción rápida *"Reportar Novedad en este Lote"* en el Bottom Sheet **Detalle del Lote** que navega a `/novedades/nueva?lotId={selectedLote.id}`.
+- `src/app/feature/cultivos/pages/cultivo-detalle/cultivo-detalle.page.ts / .html`: Botón contextual *"+ Novedad"* en la sección **Cuaderno de Campo** que navega a `/novedades/nueva?cropId={cultivo.id}`, e integración de las novedades vinculadas al cultivo (`relatedCropId` / `relatedLotId`) dentro del Cuaderno de Campo.
 
 ## 3. UI, Sensores y Experiencia Móvil (Ionic)
 
 ### 3.1. Listado de Novedades (`/novedades`)
 1. **Header y Controles Superiores:**
-   - `ion-toolbar` con `ion-menu-button`, título *Centro de Novedades* y botón de filtro por prioridad con `ion-badge` cuando hay filtro activo.
+   - `ion-toolbar` con `ion-menu-button`, título *Centro de Novedades* y botón de filtro por prioridad/entidad con `ion-badge` cuando hay filtro activo.
    - Al ingresar a `/novedades`, se resetea `notificationService.resetCount()`.
-   - `ion-searchbar` reactivo para buscar por **título**, **descripción** o **autor/origen**.
+   - `ion-searchbar` reactivo para buscar por **título**, **descripción**, **autor/origen** o **entidad vinculada**.
    - `ion-segment` con tres vistas rápidas: **Todas**, **Alertas** (`ALERT`) y **Notas** (`NOTE`).
 2. **Listado, Tiempo Real y Pull-to-Refresh:**
    - `ion-refresher` para recargar desde el backend y actualización automática cuando `notificationService.incomingAlert$` emite un nuevo registro de la finca activa.
-   - Tarjetas táctiles diferenciadas visualmente entre *Alerta* y *Nota*, mostrando: ícono de tipo, autor/origen, fecha (`dd/MM - HH:mm hs`), badge de prioridad (*Baja, Media, Alta, Crítica*), extracto de descripción e indicador/miniatura cuando posee evidencia fotográfica o ubicación GPS.
+   - Tarjetas táctiles diferenciadas visualmente entre *Alerta* y *Nota*, mostrando: ícono de tipo, autor/origen, fecha (`dd/MM/yy HH:mm hs`), badge de prioridad (*Baja, Media, Alta, Crítica*), extracto de descripción e indicador/miniatura cuando posee evidencia fotográfica o ubicación GPS.
 3. **Acción Flotante (`ion-fab`):**
    - Botón `+` en esquina inferior derecha habilitado para cualquier rol con acceso a la finca (`ANY`) que navega a `/novedades/nueva`.
 
@@ -87,26 +88,29 @@ Implementar el módulo completo de **Centro de Novedades (`Alert`)** en la aplic
      - Resto de roles (`OWNER`, `FOREMAN`, `WORKER`, `APPLICATOR`): `Lote`, `Cultivo` y `Animal`.
    - Preselección automática si ingresa mediante `?lotId=...` o `?cropId=...`.
 3. **Modo Dual Geoespacial (`@capacitor/geolocation` + Leaflet-Geoman):**
-   - **Acción 1 — *"Usar mi ubicación GPS"*:** Solicita permisos nativos con `Geolocation.checkPermissions()` / `requestPermissions()`, obtiene `Geolocation.getCurrentPosition({ enableHighAccuracy: true })`, coloca un Pin GPS exacto en el minimapa (`centroid: [coords.longitude, coords.latitude]`) y, si el nivel es `Lote` (o aún no hay lote elegido), ejecuta validación *point-in-polygon* contra `lotesDisponibles` para **auto-seleccionar el lote** donde se encuentra parado el usuario (mostrando feedback en pantalla).
+   - **Acción 1 — *"Usar mi ubicación GPS"*:** Solicita permisos nativos con `Geolocation.checkPermissions()` / `requestPermissions()`, obtiene `Geolocation.getCurrentPosition({ enableHighAccuracy: true })`, coloca un Pin GPS exacto en el minimapa (`centroid: [coords.longitude, coords.latitude]`) y ejecuta validación *point-in-polygon* contra `lotesDisponibles` para **auto-seleccionar el lote** (o el cultivo implantado en ese lote) donde se encuentra parado el usuario.
    - **Acción 2 — *"Dibujar Sub-Zona"*:** Permite delimitar manualmente un sub-polígono sobre el lote/cultivo con `@geoman-io/leaflet-geoman-free` (`polygonLimit` cerrado en orden `[lng, lat]`) o limpiar la sub-zona para volver al punto GPS / polígono base.
 4. **Evidencia Fotográfica Múltiple (`@capacitor/camera`):**
    - Botones claros para **Tomar Foto** (`CameraSource.Camera`) o **Galería** (`CameraSource.Photos`) con `resultType: CameraResultType.Uri` y `quality: 80` (con fallback a `<input type="file" accept="image/jpeg,image/png,image/webp">` en navegador web si aplica).
    - Conversión de `photo.webPath` a `Blob` validando en cliente:
      - Formato permitido: `.jpg`/`.jpeg` (`image/jpeg`), `.png` (`image/png`) o `.webp` (`image/webp`).
      - Tamaño individual `<= 10 MB` y acumulado `<= 25 MB`.
-   - Galería horizontal/grilla de previsualización con tamaño estimado y botón para quitar cada foto antes de guardar.
+   - Galería en grilla de previsualización con tamaño estimado y botón para quitar cada foto antes de guardar.
    - Al confirmar **Guardar Registro**, se suben todas las fotos en paralelo con `forkJoin` (`POST /alerts/images`) y, con los `paths` devueltos, se envía el `POST /alerts`.
 
 ## 4. Permisos, Restricciones Técnicas y Ciclo de Vida
+- **Directorio Nativo Android (`/android`):** La carpeta `/android/` se encuentra excluida en `.gitignore` para no subir binarios ni proyectos generados a GitHub. Al inicializar la plataforma nativa (`npx cap add android` o `npx cap sync android`), se deben declarar en `android/app/src/main/AndroidManifest.xml` los siguientes permisos:
+  - Ubicación: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` y `android.hardware.location.gps`.
+  - Cámara y Multimedia: `CAMERA`, `READ_MEDIA_IMAGES`, `READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE`.
 - **Persistencia Nativa:** Obtención de `farmId`, `userRole` y `userId`/`token` exclusivamente mediante `ContextService`, `AuthService` y `UserService` (`@capacitor/preferences`), sin utilizar `localStorage`.
 - **Presupuesto de Estilos Angular:** Cada archivo `.scss` de componente debe mantenerse estrictamente por debajo de `4.00 kB` compilados (`anyComponentStyle` budget).
 - **Ciclo de Vida Leaflet, ObjectURLs y RxJS:** Limpieza de suscripciones con `takeUntil(destroy$)`, revocación de `blob:` previews al salir, `invalidateSize()` en `ionViewDidEnter` y `map.remove()` en `ngOnDestroy`.
 - **Requisito CORS WebSocket en Backend:** Para pruebas en `localhost:8100` y WebView nativo (`https://localhost`, `http://localhost`, `capacitor://localhost`), el endpoint `/ws` en `WebSocketConfig.java` debe admitir dichos orígenes.
 
 ## 5. Plan de Implementación
-- [ ] Instalar `@capacitor/camera`, `@capacitor/geolocation`, `@stomp/rx-stomp`, `sockjs-client` y `@types/sockjs-client` (y verificar polyfill `global` si `sockjs-client` lo requiere en Angular 22).
-- [ ] Crear modelos (`novedad.model.ts`, `animal.model.ts`) y servicios Core (`alert.service.ts`, `animal.service.ts`, `websocket.service.ts`, `notification.service.ts`).
-- [ ] Implementar listado `novedades.page` (búsqueda, segmentos `Todas | Alertas | Notas`, filtro de prioridad, `ion-refresher`, actualización por WebSocket y FAB `+`), conectando el menú lateral y badges de notificaciones en `app.component.html` y `home.page.html`.
-- [ ] Implementar vista `novedad-detalle.page` (ficha completa, relaciones navegables, galería con visor modal, mapa satelital con polígono + Pin GPS y baja lógica para `OWNER`/`FOREMAN`).
-- [ ] Implementar formulario `novedad-form.page` con `@capacitor/camera` (múltiples fotos + `forkJoin`), `@capacitor/geolocation` (Pin GPS + auto-detección de lote *point-in-polygon*) y dibujo de sub-zona con Leaflet-Geoman.
-- [ ] Conectar rutas en `app.routes.ts` y accesos rápidos contextuales desde `mapa.page` (`?lotId=`) y `cultivo-detalle.page` (`?cropId=` + Cuaderno de Campo).
+- [x] Instalar `@capacitor/camera`, `@capacitor/geolocation`, `@stomp/rx-stomp`, `sockjs-client` y `@types/sockjs-client` (y configurar polyfill `window.global` en `src/index.html`).
+- [x] Crear modelos (`novedad.model.ts`, `animal.model.ts`) y servicios Core (`alert.service.ts`, `animal.service.ts`, `websocket.service.ts`, `notification.service.ts`).
+- [x] Implementar listado `novedades.page` (búsqueda, segmentos `Todas | Alertas | Notas`, filtro de prioridad y entidad, `ion-refresher`, actualización por WebSocket y FAB `+`), conectando el menú lateral y badges de notificaciones en `app.component.html` y `home.page.html`.
+- [x] Implementar vista `novedad-detalle.page` (ficha completa, relaciones navegables, galería con visor modal, mapa satelital con polígono + Pin GPS y baja lógica para `OWNER`/`FOREMAN`).
+- [x] Implementar formulario `novedad-form.page` con `@capacitor/camera` (múltiples fotos + `forkJoin`), `@capacitor/geolocation` (Pin GPS + auto-detección de lote *point-in-polygon*) y dibujo de sub-zona con Leaflet-Geoman.
+- [x] Conectar rutas en `app.routes.ts` y accesos rápidos contextuales desde `mapa.page` (`?lotId=`) y `cultivo-detalle.page` (`?cropId=` + Cuaderno de Campo).

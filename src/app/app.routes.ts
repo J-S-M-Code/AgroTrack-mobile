@@ -41,5 +41,20 @@ export const routes: Routes = [
     path: 'cultivos/:id',
     loadComponent: () => import('./feature/cultivos/pages/cultivo-detalle/cultivo-detalle.page').then(m => m.CultivoDetallePage),
     canActivate: [authGuard]
+  },
+  {
+    path: 'novedades',
+    loadComponent: () => import('./feature/novedades/novedades.page').then(m => m.NovedadesPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'novedades/nueva',
+    loadComponent: () => import('./feature/novedades/pages/novedad-form/novedad-form.page').then(m => m.NovedadFormPage),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'novedades/:id',
+    loadComponent: () => import('./feature/novedades/pages/novedad-detalle/novedad-detalle.page').then(m => m.NovedadDetallePage),
+    canActivate: [authGuard]
   }
 ];
