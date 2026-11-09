@@ -3,7 +3,10 @@
   <ion-menu contentId="main-content" type="overlay" [disabled]="(authService.authStatus$ | async) === false">
     <ion-header class="ion-no-border">
       <ion-toolbar color="primary">
-        <ion-title>AgroTrack <ion-badge color="warning" style="vertical-align: middle; margin-left: 5px;">BETA</ion-badge></ion-title>
+        <div class="menu-brand-header">
+          <img src="assets/icon/agrotrack-icon.png" alt="AgroTrack" class="menu-brand-icon" />
+          <ion-title>AgroTrack <ion-badge color="warning" class="beta-badge">BETA</ion-badge></ion-title>
+        </div>
       </ion-toolbar>
     </ion-header>
     
@@ -38,9 +41,12 @@
               </ion-item>
             </ng-container>
 
-            <ion-item button>
+            <ion-item button routerLink="/novedades" routerDirection="root">
               <ion-icon slot="start" name="notifications-outline"></ion-icon>
               <ion-label>Novedades</ion-label>
+              <ion-badge slot="end" color="danger" *ngIf="(notificationService.unreadCount$ | async) as unread">
+                {{ unread }}
+              </ion-badge>
             </ion-item>
 
             <ion-item button>

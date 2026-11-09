@@ -5,10 +5,12 @@ import { addIcons } from 'ionicons';
 import { 
   homeOutline, gridOutline, mapOutline, layersOutline, 
   notificationsOutline, clipboardOutline, leafOutline, 
-  pawOutline, settingsOutline, peopleOutline, logOutOutline
+  pawOutline, settingsOutline, peopleOutline, logOutOutline,
+  warningOutline, documentTextOutline
 } from 'ionicons/icons';
 import { AuthService } from './core/auth/services/auth.service';
 import { ContextService } from './core/services/context.service';
+import { NotificationService } from './core/services/notification.service';
 import { RouterModule } from '@angular/router';
 
 @Component({
@@ -21,12 +23,14 @@ import { RouterModule } from '@angular/router';
 export class AppComponent {
   authService = inject(AuthService);
   contextService = inject(ContextService);
+  notificationService = inject(NotificationService);
 
   constructor() {
     addIcons({
       homeOutline, gridOutline, mapOutline, layersOutline, 
       notificationsOutline, clipboardOutline, leafOutline, 
-      pawOutline, settingsOutline, peopleOutline, logOutOutline
+      pawOutline, settingsOutline, peopleOutline, logOutOutline,
+      warningOutline, documentTextOutline
     });
   }
 

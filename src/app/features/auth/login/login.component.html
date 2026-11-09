@@ -1,9 +1,11 @@
 <ion-content class="ion-padding ion-text-center">
   <div class="login-container">
     <div class="logo-section">
-      <img src="assets/icon/favicon.png" alt="AgroTrack Logo" class="logo" />
-      <h1>AgroTrack <ion-badge color="primary">BETA</ion-badge></h1>
-      <p>Gestión Agrícola Inteligente</p>
+      <img src="assets/logo/agrotrack-logo.png" alt="AgroTrack Logo" class="logo" />
+      <div class="badge-wrapper">
+        <ion-badge color="primary">BETA</ion-badge>
+      </div>
+      <p class="subtitle">Gestión Agrícola Inteligente</p>
     </div>
 
     <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">

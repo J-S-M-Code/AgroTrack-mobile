@@ -285,6 +285,17 @@
           Registrar Cultivo en este Lote
         </ion-button>
 
+        <ion-button
+          *ngIf="selectedLote?.id"
+          expand="block"
+          fill="outline"
+          color="warning"
+          class="ion-margin-top"
+          (click)="irAReportarNovedadEnLote(selectedLote.id)">
+          <ion-icon name="warning-outline" slot="start"></ion-icon>
+          Reportar Novedad en este Lote
+        </ion-button>
+
         <!-- Aquí se redirigiría a la vista del lote específico (ej. app/lotes/:id) -->
         <ion-button expand="block" class="ion-margin-top ion-margin-bottom" color="primary">
           Ver Detalles Completos

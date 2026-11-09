@@ -10,6 +10,7 @@ import { addIcons } from 'ionicons';
 import { notificationsOutline, locationOutline, cloudOutline, waterOutline } from 'ionicons/icons';
 import { FarmService } from '../core/services/farm.service';
 import { ContextService } from '../core/services/context.service';
+import { NotificationService } from '../core/services/notification.service';
 import { Finca } from '../core/models/finca.model';
 import { UserService } from '../core/services/user.service';
 
@@ -30,6 +31,7 @@ import { FincaMinimapComponent } from '../shared/components/finca-minimap/finca-
 export class HomePage implements ViewWillEnter {
   farmService = inject(FarmService);
   contextService = inject(ContextService);
+  notificationService = inject(NotificationService);
   userService = inject(UserService);
   cdr = inject(ChangeDetectorRef);
   router = inject(Router);

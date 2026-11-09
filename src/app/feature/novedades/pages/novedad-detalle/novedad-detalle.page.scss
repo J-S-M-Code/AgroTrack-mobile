@@ -1,0 +1,41 @@
+:host { display: flex; flex-direction: column; height: 100%; }
+.detail-body { padding: 14px 14px 36px; display: flex; flex-direction: column; gap: 14px; }
+.detail-card { margin: 0; border-radius: 14px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.05); border: 1px solid #e2e8f0; }
+.border-alert { border-left: 4px solid #f59e0b; }
+.border-note { border-left: 4px solid #0d8a5c; }
+.card-pad { padding: 16px; }
+.hero-top { display: flex; gap: 12px; }
+.hero-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; }
+.ico-alert { background: #fef3c7; color: #d97706; }
+.ico-note { background: #e6f4ea; color: #0d8a5c; }
+.hero-titles { flex: 1; }
+.badges-row { display: flex; gap: 6px; margin-bottom: 6px; }
+.type-pill, .prio-pill, .count-pill, .gps-pill { padding: 3px 8px; border-radius: 99px; font-size: 0.72rem; font-weight: 700; }
+.prio-pill { background: #e0f2fe; color: #0369a1; }
+.pill-alert { background: #fffbeb; color: #b45309; }
+.pill-note { background: #e6f4ea; color: #0d8a5c; }
+.prio-pill[data-prio="Crítica"], .prio-pill[data-prio="Alta"] { background: #fee2e2; color: #b91c1c; }
+.prio-pill[data-prio="Media"] { background: #fef3c7; color: #b45309; }
+.main-title { margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+.meta-grid { display: flex; gap: 12px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f1f5f9; }
+.meta-item { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; color: #64748b; strong { color: #334155; } }
+.section-heading { margin: 0 0 10px; font-size: 0.95rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; ion-icon { color: #0d8a5c; } }
+.section-header-between { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.desc-text { margin: 0; font-size: 0.88rem; color: #334155; line-height: 1.5; white-space: pre-line; }
+.relations-list { display: flex; flex-direction: column; gap: 6px; }
+.relation-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; }
+.rel-left { display: flex; align-items: center; gap: 8px; }
+.rel-icon { width: 32px; height: 32px; border-radius: 6px; background: #e6f4ea; color: #0d8a5c; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.rel-type { display: block; font-size: 0.7rem; color: #64748b; }
+.rel-name { display: block; font-size: 0.85rem; color: #1e293b; }
+.rel-action { font-size: 0.76rem; font-weight: 700; color: #0d8a5c; display: flex; align-items: center; }
+.count-pill { background: #eff6ff; color: #1d4ed8; }
+.gps-pill { background: #ecfdf5; color: #047857; display: inline-flex; align-items: center; gap: 4px; }
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(95px, 1fr)); gap: 8px; }
+.photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; background: #f1f5f9; cursor: pointer; img { width: 100%; height: 100%; object-fit: cover; } }
+.zoom-badge { position: absolute; bottom: 4px; right: 4px; width: 22px; height: 22px; border-radius: 4px; background: rgba(0,0,0,.6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; }
+.coords-banner { display: flex; align-items: center; gap: 6px; padding: 6px 8px; margin-bottom: 8px; border-radius: 6px; background: #f0fdf4; color: #166534; font-size: 0.76rem; border: 1px solid #bbf7d0; }
+.map-box { height: 210px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+.leaflet-box { width: 100%; height: 100%; }
+.empty-block { padding: 14px; text-align: center; background: #f8fafc; border-radius: 8px; color: #64748b; font-size: 0.8rem; ion-icon { font-size: 1.4rem; color: #94a3b8; } }
+.muted-empty { margin: 0; font-size: 0.82rem; color: #64748b; }

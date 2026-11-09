@@ -317,7 +317,7 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
 
     if (!this.map) {
       this.map = L.map('mapa-form', { zoomControl: false }).setView([-29.161, -67.4983], 13);
-      L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         maxZoom: 20,
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       }).addTo(this.map);

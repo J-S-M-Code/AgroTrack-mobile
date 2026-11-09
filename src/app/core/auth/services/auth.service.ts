@@ -62,6 +62,19 @@ export class AuthService {
     return value;
   }
 
+  async getUserId(): Promise<string | null> {
+    const { value } = await Preferences.get({ key: USER_ID_KEY });
+    if (value) return value;
+    const token = await this.getToken();
+    if (!token) return null;
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      return payload?.sub || null;
+    } catch {
+      return null;
+    }
+  }
+
   async hasToken(): Promise<boolean> {
     const token = await this.getToken();
     return !!token;

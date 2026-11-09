@@ -1,6 +1,6 @@
 # Spec 05: Módulo de Cultivos (Full Parity con Web y UX Móvil)
 
-**Status:** Review  
+**Status:** Finished  
 **Date:** 2026-10-30  
 **Completed Date:** 2026-10-30  
 **Target Branch:** `feature/cultivos`

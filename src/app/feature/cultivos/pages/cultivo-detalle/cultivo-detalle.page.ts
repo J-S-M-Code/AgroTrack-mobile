@@ -61,6 +61,7 @@ import * as L from 'leaflet';
 import { CropService } from '../../../../core/services/crop.service';
 import { LotService } from '../../../../core/services/lot.service';
 import { SpectralMapService } from '../../../../core/services/spectral-map.service';
+import { AlertService } from '../../../../core/services/alert.service';
 import { ContextService } from '../../../../core/services/context.service';
 import { environment } from '../../../../../environments/environment';
 import {
@@ -114,6 +115,7 @@ export class CultivoDetallePage
   private cropService = inject(CropService);
   private lotService = inject(LotService);
   private spectralMapService = inject(SpectralMapService);
+  private alertService = inject(AlertService);
   private contextService = inject(ContextService);
   private toastCtrl = inject(ToastController);
   private cdr = inject(ChangeDetectorRef);
@@ -280,6 +282,7 @@ export class CultivoDetallePage
           this.cdr.detectChanges();
 
           const targetFarmId = crop.fincaId || this.farmId;
+          this.cargarNovedadesDelCultivo(targetFarmId, crop.id, crop.loteId);
           this.cargarMapasYLote(targetFarmId, crop.loteId);
         },
         error: (err) => {
@@ -348,7 +351,7 @@ export class CultivoDetallePage
         15
       );
       L.control.zoom({ position: 'topright' }).addTo(this.mapaCultivo);
-      L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+      L.tileLayer('https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
         maxZoom: 22,
         maxNativeZoom: 20,
         subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
@@ -447,6 +450,50 @@ export class CultivoDetallePage
   }
 
   // --- CUADERNO DE CAMPO ---
+  private cargarNovedadesDelCultivo(targetFarmId: string, cropId: string, loteId?: string) {
+    if (!targetFarmId) return;
+    this.alertService
+      .getAlertsByFarm(targetFarmId)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (alerts) => {
+          if (!this.cultivo) return;
+          const vinculadas = (alerts || []).filter(
+            (a) =>
+              String(a.relatedCropId) === String(cropId) ||
+              (!!loteId && String(a.relatedLotId) === String(loteId))
+          );
+          const eventosNovedades: EventoCampo[] = vinculadas.map((a) => ({
+            id: a.id,
+            alertId: a.id,
+            fecha: a.fecha,
+            tipo: a.tipo === 'Alerta' ? 'Alerta' : 'Comentario',
+            descripcion: `${a.titulo} — ${a.descripcion}`,
+            autor: a.origen,
+          }));
+          const previos = (this.cultivo.historial || []).filter((h) => !h.alertId);
+          this.cultivo.historial = [...eventosNovedades, ...previos].sort(
+            (x, y) => new Date(y.fecha).getTime() - new Date(x.fecha).getTime()
+          );
+          this.aplicarFiltroEventos(this.filtroEventos);
+        },
+        error: () => {},
+      });
+  }
+
+  irARegistrarNovedadCultivo() {
+    if (!this.cultivo) return;
+    this.router.navigate(['/novedades/nueva'], {
+      queryParams: { cropId: this.cultivo.id },
+    });
+  }
+
+  verEventoCampo(ev: EventoCampo) {
+    if (ev.alertId) {
+      this.router.navigate(['/novedades', ev.alertId]);
+    }
+  }
+
   onSegmentEventosChange(event: any) {
     const val = event?.detail?.value;
     if (val) {
