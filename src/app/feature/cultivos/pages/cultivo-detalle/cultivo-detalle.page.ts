@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angula
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, takeUntil, filter, take } from 'rxjs';
+import { Subject, forkJoin, of, takeUntil, filter, take, catchError } from 'rxjs';
 import {
   IonHeader,
   IonToolbar,
@@ -62,6 +62,7 @@ import { CropService } from '../../../../core/services/crop.service';
 import { LotService } from '../../../../core/services/lot.service';
 import { SpectralMapService } from '../../../../core/services/spectral-map.service';
 import { AlertService } from '../../../../core/services/alert.service';
+import { TaskService } from '../../../../core/services/task.service';
 import { ContextService } from '../../../../core/services/context.service';
 import { environment } from '../../../../../environments/environment';
 import {
@@ -116,6 +117,7 @@ export class CultivoDetallePage
   private lotService = inject(LotService);
   private spectralMapService = inject(SpectralMapService);
   private alertService = inject(AlertService);
+  private taskService = inject(TaskService);
   private contextService = inject(ContextService);
   private toastCtrl = inject(ToastController);
   private cdr = inject(ChangeDetectorRef);
@@ -452,11 +454,17 @@ export class CultivoDetallePage
   // --- CUADERNO DE CAMPO ---
   private cargarNovedadesDelCultivo(targetFarmId: string, cropId: string, loteId?: string) {
     if (!targetFarmId) return;
-    this.alertService
-      .getAlertsByFarm(targetFarmId)
+    forkJoin({
+      alerts: this.alertService
+        .getAlertsByFarm(targetFarmId)
+        .pipe(catchError(() => of([]))),
+      tasks: this.taskService
+        .getTasksByFarm(targetFarmId)
+        .pipe(catchError(() => of([]))),
+    })
       .pipe(takeUntil(this.destroy$))
       .subscribe({
-        next: (alerts) => {
+        next: ({ alerts, tasks }) => {
           if (!this.cultivo) return;
           const vinculadas = (alerts || []).filter(
             (a) =>
@@ -471,8 +479,38 @@ export class CultivoDetallePage
             descripcion: `${a.titulo} — ${a.descripcion}`,
             autor: a.origen,
           }));
-          const previos = (this.cultivo.historial || []).filter((h) => !h.alertId);
-          this.cultivo.historial = [...eventosNovedades, ...previos].sort(
+
+          const tareasVinculadas = loteId
+            ? (tasks || []).filter((t) => String(t.loteId) === String(loteId))
+            : [];
+          const eventosTareas: EventoCampo[] = tareasVinculadas.map((t) => {
+            const estadoTag =
+              t.rawStatus === 'FINISH'
+                ? 'Completada'
+                : t.rawStatus === 'IN_PROGESS'
+                  ? 'En Progreso'
+                  : 'Pendiente';
+            const cierreTxt = t.observacionCierre
+              ? ` | Cierre: ${t.observacionCierre}`
+              : '';
+            return {
+              id: `task-${t.id}`,
+              taskId: t.id,
+              fecha: t.fechaFinalizacion || t.fechaCreacion,
+              tipo: 'Tarea',
+              descripcion: `[${t.accionLabel} · ${estadoTag}] ${t.titulo} — ${t.descripcion}${cierreTxt}`,
+              autor: t.responsable,
+            };
+          });
+
+          const previos = (this.cultivo.historial || []).filter(
+            (h) => !h.alertId && !h.taskId
+          );
+          this.cultivo.historial = [
+            ...eventosNovedades,
+            ...eventosTareas,
+            ...previos,
+          ].sort(
             (x, y) => new Date(y.fecha).getTime() - new Date(x.fecha).getTime()
           );
           this.aplicarFiltroEventos(this.filtroEventos);
@@ -488,8 +526,20 @@ export class CultivoDetallePage
     });
   }
 
+  irAAsignarTareaCultivo() {
+    if (!this.cultivo) return;
+    this.router.navigate(['/tareas/nueva'], {
+      queryParams: {
+        lotId: this.cultivo.loteId || undefined,
+        cropId: this.cultivo.id,
+      },
+    });
+  }
+
   verEventoCampo(ev: EventoCampo) {
-    if (ev.alertId) {
+    if (ev.taskId) {
+      this.router.navigate(['/tareas', ev.taskId]);
+    } else if (ev.alertId) {
       this.router.navigate(['/novedades', ev.alertId]);
     }
   }

@@ -10,6 +10,12 @@ const config: CapacitorConfig = {
   },
   android: {
     allowMixedContent: true
+  },
+  plugins: {
+    LocalNotifications: {
+      smallIcon: 'ic_stat_agrotrack',
+      iconColor: '#0d8a5c'
+    }
   }
 };
 

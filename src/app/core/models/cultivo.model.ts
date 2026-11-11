@@ -50,6 +50,7 @@ export const TYPE_CROP_OPTIONS: { value: TypeCrop; label: string }[] = [
 export interface EventoCampo {
   id: number | string;
   alertId?: string;
+  taskId?: string;
   fecha: Date;
   tipo: 'Alerta' | 'Tarea' | 'Comentario';
   descripcion: string;
