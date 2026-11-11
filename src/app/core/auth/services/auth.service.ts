@@ -18,6 +18,8 @@ export class AuthService {
   private authStatusSubj = new BehaviorSubject<boolean>(false);
   public authStatus$ = this.authStatusSubj.asObservable();
 
+  private memoryToken: string | null = null;
+  private memoryUserId: string | null = null;
   private refreshInFlight: Promise<string | null> | null = null;
 
   constructor(private http: HttpClient, private router: Router) {
@@ -42,6 +44,8 @@ export class AuthService {
   }
 
   async logout(): Promise<void> {
+    this.memoryToken = null;
+    this.memoryUserId = null;
     await Preferences.remove({ key: TOKEN_KEY });
     await Preferences.remove({ key: USER_ID_KEY });
     this.authStatusSubj.next(false);
@@ -49,10 +53,12 @@ export class AuthService {
   }
 
   async setToken(token: string): Promise<void> {
+    this.memoryToken = token;
     await Preferences.set({ key: TOKEN_KEY, value: token });
     try {
       const payload = this.decodePayload(token);
       if (payload && payload.sub) {
+        this.memoryUserId = payload.sub;
         await Preferences.set({ key: USER_ID_KEY, value: payload.sub });
       }
     } catch (e) {
@@ -61,7 +67,11 @@ export class AuthService {
   }
 
   async getToken(): Promise<string | null> {
+    if (this.memoryToken) {
+      return this.memoryToken;
+    }
     const { value } = await Preferences.get({ key: TOKEN_KEY });
+    this.memoryToken = value;
     return value;
   }
 

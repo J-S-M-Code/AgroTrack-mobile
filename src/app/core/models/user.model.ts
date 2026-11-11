@@ -9,3 +9,22 @@ export interface User {
   address?: string;
   active?: boolean;
 }
+
+export interface UpdateProfileDto {
+  name: string;
+  lastName: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface UpdatePasswordDto {
+  currentPassword: string;
+  newPassword: string;
+}
+
+export interface UserPreferences {
+  unidadSuperficie: 'ha' | 'ac';
+  unidadTemperatura: 'C' | 'F';
+  altoContraste: boolean;
+  notificacionesLocales: boolean;
+}
