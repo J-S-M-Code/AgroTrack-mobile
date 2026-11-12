@@ -1,6 +1,6 @@
 # Spec 09: Módulo de Gestión de Personas y Equipo de Trabajo de Campo
 
-**Status:** Implement
+**Status:** Review
 **Date:** 2026-11-11  
 **Target Repository:** `AgroTrack Mobile`  
 **Target Branch:** `feature/personnel`  

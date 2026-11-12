@@ -84,7 +84,7 @@
           </ion-item>
 
           <ng-container *ngIf="(contextService.isFarmContext$ | async) && ((contextService.userRole$ | async) === 'OWNER' || (contextService.userRole$ | async) === 'FOREMAN')">
-            <ion-item button>
+            <ion-item button routerLink="/personas" routerDirection="root">
               <ion-icon slot="start" name="people-outline"></ion-icon>
               <ion-label>Personas</ion-label>
             </ion-item>
