@@ -4,42 +4,33 @@
       <ion-menu-button></ion-menu-button>
     </ion-buttons>
     <ion-title>Equipo de Trabajo</ion-title>
-    @if (esOwner && fincaActiva) {
-      <ion-buttons slot="end">
-        <ion-button (click)="abrirModalAlta()" fill="solid" color="light" class="btn-nuevo">
-          <ion-icon name="person-add-outline" slot="start"></ion-icon>
-          Nuevo
-        </ion-button>
-      </ion-buttons>
-    }
   </ion-toolbar>
 
   @if (fincaActiva) {
-    <ion-toolbar color="primary" class="search-toolbar">
-      <ion-searchbar
-        [(ngModel)]="filtroTexto"
-        placeholder="Buscar por nombre, email o rol..."
-        [debounce]="150"
-        mode="ios"
-        class="custom-searchbar"
-      ></ion-searchbar>
-    </ion-toolbar>
+    <ion-toolbar class="controls-toolbar">
+      <div class="controls-wrapper">
+        <ion-searchbar
+          [(ngModel)]="filtroTexto"
+          placeholder="Buscar por nombre, email o rol..."
+          [debounce]="150"
+          class="personas-searchbar"
+        ></ion-searchbar>
 
-    <ion-toolbar color="primary" class="filter-toolbar">
-      <ion-segment [(ngModel)]="categoriaSeleccionada" mode="md" [scrollable]="true">
-        <ion-segment-button value="TODOS">
-          <ion-label>Todos ({{ personas.length }})</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="OPERATIVO">
-          <ion-label>Operativos</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="TECNICO">
-          <ion-label>Técnicos</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="GESTION">
-          <ion-label>Gestión</ion-label>
-        </ion-segment-button>
-      </ion-segment>
+        <ion-segment [(ngModel)]="categoriaSeleccionada" mode="md" [scrollable]="true" class="personas-segment">
+          <ion-segment-button value="TODOS">
+            <ion-label>Todos ({{ personas.length }})</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="OPERATIVO">
+            <ion-label>Operativos</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="TECNICO">
+            <ion-label>Técnicos</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="GESTION">
+            <ion-label>Gestión</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
     </ion-toolbar>
   }
 </ion-header>
@@ -150,6 +141,14 @@
         </ion-card>
       }
     </div>
+  }
+
+  @if (esOwner && fincaActiva) {
+    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+      <ion-fab-button color="primary" (click)="abrirModalAlta()" aria-label="Agregar nuevo miembro">
+        <ion-icon name="add-outline"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
   }
 </ion-content>
 

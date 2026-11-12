@@ -1,39 +1,43 @@
-.search-toolbar {
-  --background: var(--ion-color-primary);
-  --padding-top: 0;
-  --padding-bottom: 2px;
+.controls-toolbar {
+  --background: #fff;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
-.custom-searchbar {
-  --background: rgba(255, 255, 255, 0.95);
+.controls-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.personas-searchbar {
+  --background: #f1f5f9;
   --color: #0f172a;
   --placeholder-color: #64748b;
-  --icon-color: #0d8a5c;
-  --border-radius: 8px;
-  padding: 0 10px;
+  --icon-color: #475569;
+  --clear-button-color: #64748b;
+  --border-radius: 10px;
+  --box-shadow: none;
+  padding: 0;
 }
 
-.filter-toolbar {
-  --background: var(--ion-color-primary);
-  --border-width: 0;
+.personas-segment {
+  --background: #f1f5f9;
+  border-radius: 10px;
+  padding: 2px;
 
-  ion-segment {
-    --background: rgba(255, 255, 255, 0.15);
-
-    ion-segment-button {
-      --color: rgba(255, 255, 255, 0.85);
-      --color-checked: #fff;
-      --indicator-color: #fff;
-      font-size: 0.78rem;
-      font-weight: 600;
-    }
+  ion-segment-button {
+    --indicator-color: #fff;
+    --color: #64748b;
+    --color-checked: #0d8a5c;
+    min-height: 34px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-transform: none;
   }
-}
-
-.btn-nuevo {
-  --border-radius: 8px;
-  font-weight: 700;
-  font-size: 0.85rem;
 }
 
 .personas-content {
@@ -67,6 +71,7 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding-bottom: 84px;
 }
 
 .persona-card {

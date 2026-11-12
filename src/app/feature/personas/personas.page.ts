@@ -34,6 +34,8 @@ import {
   IonSelect,
   IonSelectOption,
   IonToggle,
+  IonFab,
+  IonFabButton,
   AlertController,
   ToastController,
 } from '@ionic/angular';
@@ -41,6 +43,7 @@ import { addIcons } from 'ionicons';
 import {
   peopleOutline,
   personAddOutline,
+  addOutline,
   createOutline,
   trashOutline,
   callOutline,
@@ -98,6 +101,8 @@ import { Finca } from '../../core/models/finca.model';
     IonSelect,
     IonSelectOption,
     IonToggle,
+    IonFab,
+    IonFabButton,
   ],
 })
 export class PersonasPage implements OnInit, OnDestroy {
@@ -158,6 +163,7 @@ export class PersonasPage implements OnInit, OnDestroy {
     addIcons({
       peopleOutline,
       personAddOutline,
+      addOutline,
       createOutline,
       trashOutline,
       callOutline,
