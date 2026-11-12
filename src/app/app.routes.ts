@@ -71,5 +71,10 @@ export const routes: Routes = [
     path: 'tareas/:id',
     loadComponent: () => import('./feature/tareas/pages/tarea-detalle/tarea-detalle.page').then(m => m.TareaDetallePage),
     canActivate: [authGuard]
+  },
+  {
+    path: 'configuracion',
+    loadComponent: () => import('./feature/configuraciones/configuracion.page').then(m => m.ConfiguracionPage),
+    canActivate: [authGuard]
   }
 ];

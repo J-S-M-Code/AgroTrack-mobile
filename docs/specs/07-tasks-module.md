@@ -1,6 +1,6 @@
 # Spec 07: Módulo de Tareas Operativas de Campo, Renovación de Sesión y Notificaciones Nativas
 
-**Status:** review   
+**Status:** Finished   
 **Date:** 2026-11-09  
 **Target Repository:** `AgroTrack Mobile`  
 **Target Branch:** `feature/tasks`
