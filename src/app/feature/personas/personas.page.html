@@ -55,7 +55,7 @@
     </div>
   } @else if (cargando && personas.length === 0) {
     <!-- ESTADO 2: CARGANDO -->
-    <div class="loading-box">
+    <div class="empty-box">
       <ion-spinner name="crescent" color="primary"></ion-spinner>
       <p>Cargando equipo de {{ fincaActiva.name }}...</p>
     </div>
@@ -153,7 +153,7 @@
 </ion-content>
 
 <!-- ==================== MODAL 1: ALTA DE MIEMBRO (DUAL) ==================== -->
-<ion-modal [isOpen]="modalAltaAbierto" (didDismiss)="cerrarModalAlta()">
+<ion-modal #modalAlta [isOpen]="modalAltaAbierto" (didDismiss)="cerrarModalAlta()">
   <ng-template>
     <ion-header>
       <ion-toolbar color="primary">
@@ -277,7 +277,7 @@
           </ion-item>
 
           <div class="ion-margin-top">
-            <ion-button expand="block" type="submit" [disabled]="guardandoAlta || !crearForm.name.trim() || !crearForm.lastName.trim() || !crearForm.email.trim()" class="btn-save">
+            <ion-button expand="block" type="submit" [disabled]="guardandoAlta || !crearForm.name.trim() || !crearForm.lastName.trim() || !crearForm.dni.trim() || !crearForm.email.trim()" class="btn-save">
               @if (guardandoAlta) {
                 <ion-spinner name="crescent" slot="start"></ion-spinner>
                 Creando...
@@ -294,7 +294,7 @@
 </ion-modal>
 
 <!-- ==================== MODAL 2: EDITAR ROL ==================== -->
-<ion-modal [isOpen]="modalRolAbierto" (didDismiss)="cerrarModalEditarRol()">
+<ion-modal #modalRol [isOpen]="modalRolAbierto" (didDismiss)="cerrarModalEditarRol()">
   <ng-template>
     <ion-header>
       <ion-toolbar color="primary">
@@ -357,20 +357,21 @@
   </ng-template>
 </ion-modal>
 
-<!-- ==================== MODAL 3: REVOCAR ACCESO ==================== -->
-<ion-modal [isOpen]="modalRevocarAbierto" (didDismiss)="cerrarModalRevocar()">
-  <ng-template>
-    <ion-header>
-      <ion-toolbar color="danger">
-        <ion-title>Revocar Acceso</ion-title>
-        <ion-buttons slot="end">
-          <ion-button (click)="cerrarModalRevocar()">Cerrar</ion-button>
-        </ion-buttons>
-      </ion-toolbar>
-    </ion-header>
+<!-- ==================== MODAL 3: REVOCAR ACCESO (FLOTANTE) ==================== -->
+@if (modalRevocarAbierto && personaARevocar) {
+  <div class="modal-overlay" (click)="!revocando && cerrarModalRevocar()">
+    <div class="mbox" (click)="$event.stopPropagation()">
+      <div class="mhead">
+        <div>
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>Revocar Acceso</span>
+        </div>
+        <button type="button" [disabled]="revocando" (click)="cerrarModalRevocar()">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
 
-    <ion-content class="ion-padding">
-      @if (personaARevocar) {
+      <div class="ion-padding">
         <div class="warn-box">
           <p>
             Esta acción removerá a <strong>{{ personaARevocar.nombre }}</strong> del equipo de
@@ -378,26 +379,37 @@
           </p>
         </div>
 
-        <ion-item lines="inset" class="form-item">
-          <ion-input
-            [label]="'Escribe ' + personaARevocar.nombre + ' para confirmar *'"
-            labelPlacement="stacked"
-            [(ngModel)]="nombreConfirmacion"
-            placeholder="Nombre exacto..."
-          ></ion-input>
-        </ion-item>
+        <label class="clabel">
+          Escribe <strong>{{ personaARevocar.nombre }}</strong> para confirmar:
+        </label>
+        <input
+          type="text"
+          class="cinput"
+          [value]="nombreConfirmacion"
+          (input)="actualizarConfirmacion($event)"
+          placeholder="Nombre exacto..."
+          [disabled]="revocando"
+        />
+      </div>
 
-        <div class="action-row ion-margin-top">
-          <ion-button fill="outline" color="medium" (click)="cerrarModalRevocar()">Cancelar</ion-button>
-          <ion-button
-            color="danger"
-            [disabled]="revocando || nombreConfirmacion.trim() !== personaARevocar.nombre.trim()"
-            (click)="confirmarRevocacion()"
-          >
-            {{ revocando ? 'Revocando...' : 'Confirmar Revocación' }}
-          </ion-button>
-        </div>
-      }
-    </ion-content>
-  </ng-template>
-</ion-modal>
+      <div class="mfoot">
+        <ion-button fill="outline" color="medium" size="small" [disabled]="revocando" (click)="cerrarModalRevocar()">
+          Cancelar
+        </ion-button>
+        <ion-button
+          color="danger"
+          size="small"
+          [disabled]="revocando || nombreConfirmacion.trim() !== personaARevocar.nombre.trim()"
+          (click)="confirmarRevocacion()"
+        >
+          @if (revocando) {
+            <ion-spinner name="crescent" slot="start"></ion-spinner>
+            Revocando...
+          } @else {
+            Revocar Acceso
+          }
+        </ion-button>
+      </div>
+    </div>
+  </div>
+}

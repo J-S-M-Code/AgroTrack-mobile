@@ -3,12 +3,14 @@ import {
   OnInit,
   OnDestroy,
   ChangeDetectorRef,
+  ViewChild,
   inject,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import {
   IonHeader,
   IonToolbar,
@@ -122,6 +124,9 @@ export class PersonasPage implements OnInit, OnDestroy {
   categoriaSeleccionada: 'TODOS' | 'OPERATIVO' | 'TECNICO' | 'GESTION' = 'TODOS';
 
   rolesDisponibles = ROLES_OPTIONS;
+
+  @ViewChild('modalAlta') modalAlta?: IonModal;
+  @ViewChild('modalRol') modalRol?: IonModal;
 
   // --- MODAL: ALTA DE MIEMBRO (DUAL) ---
   modalAltaAbierto = false;
@@ -270,6 +275,7 @@ export class PersonasPage implements OnInit, OnDestroy {
   // ==================== MODAL ALTA DE MIEMBRO ====================
   abrirModalAlta() {
     this.flujoAlta = 'asignar';
+    this.guardandoAlta = false;
     this.asignarForm = { email: '', role: 'WORKER' };
     this.crearForm = {
       name: '',
@@ -287,9 +293,10 @@ export class PersonasPage implements OnInit, OnDestroy {
   }
 
   cerrarModalAlta() {
-    this.modalAltaAbierto = false;
     this.guardandoAlta = false;
+    this.modalAltaAbierto = false;
     this.cdr.detectChanges();
+    void this.modalAlta?.dismiss();
   }
 
   setFlujoAlta(nuevoFlujo: any) {
@@ -318,35 +325,40 @@ export class PersonasPage implements OnInit, OnDestroy {
       return;
     }
 
+    const fincaId = this.fincaActiva!.id;
     this.guardandoAlta = true;
     this.cdr.detectChanges();
 
     const dto = {
       email: this.asignarForm.email.trim(),
       role: this.asignarForm.role,
-      farmIds: [this.fincaActiva!.id],
+      farmIds: [fincaId],
     };
 
     this.sub.add(
-      this.userService.assignUserToFarm(dto).subscribe({
-        next: () => {
-          this.guardandoAlta = false;
-          this.cerrarModalAlta();
-          this.cargarPersonal(this.fincaActiva!.id);
-          this.cdr.detectChanges();
-          this.mostrarToast('Usuario asignado exitosamente a la finca.', 'success');
-        },
-        error: (err) => {
-          this.guardandoAlta = false;
-          this.cdr.detectChanges();
-          console.error('Error al asignar usuario:', err);
-          const msg =
-            err.status === 404
-              ? 'Usuario no encontrado. Verifica que esté registrado en AgroTrack.'
-              : 'Error al asignar usuario. Revisa los datos ingresados.';
-          this.mostrarToast(msg, 'danger');
-        },
-      })
+      this.userService
+        .assignUserToFarm(dto)
+        .pipe(
+          finalize(() => {
+            this.guardandoAlta = false;
+            this.cdr.detectChanges();
+          })
+        )
+        .subscribe({
+          next: () => {
+            this.cerrarModalAlta();
+            this.mostrarToast('Usuario asignado exitosamente a la finca.', 'success');
+            void this.cargarPersonal(fincaId);
+          },
+          error: (err) => {
+            console.error('Error al asignar usuario:', err);
+            const msg =
+              err.status === 404
+                ? 'Usuario no encontrado. Verifica que esté registrado en AgroTrack.'
+                : 'Error al asignar usuario. Revisa los datos ingresados.';
+            this.mostrarToast(msg, 'danger');
+          },
+        })
     );
   }
 
@@ -357,29 +369,34 @@ export class PersonasPage implements OnInit, OnDestroy {
       return;
     }
 
+    const fincaId = this.fincaActiva!.id;
     this.guardandoAlta = true;
     this.cdr.detectChanges();
 
     this.sub.add(
-      this.userService.inviteUserToFarm(this.fincaActiva!.id, f).subscribe({
-        next: () => {
-          this.guardandoAlta = false;
-          this.cerrarModalAlta();
-          this.cargarPersonal(this.fincaActiva!.id);
-          this.cdr.detectChanges();
-          this.mostrarToast('Colaborador creado e incorporado a la finca.', 'success');
-        },
-        error: (err) => {
-          this.guardandoAlta = false;
-          this.cdr.detectChanges();
-          console.error('Error al invitar usuario:', err);
-          const msg =
-            err.status === 409
-              ? 'El correo ya se encuentra registrado en el sistema.'
-              : err.error?.message || 'Error al dar de alta el colaborador.';
-          this.mostrarToast(msg, 'danger');
-        },
-      })
+      this.userService
+        .inviteUserToFarm(fincaId, f)
+        .pipe(
+          finalize(() => {
+            this.guardandoAlta = false;
+            this.cdr.detectChanges();
+          })
+        )
+        .subscribe({
+          next: () => {
+            this.cerrarModalAlta();
+            this.mostrarToast('Colaborador creado e incorporado a la finca.', 'success');
+            void this.cargarPersonal(fincaId);
+          },
+          error: (err) => {
+            console.error('Error al invitar usuario:', err);
+            const msg =
+              err.status === 409
+                ? 'El correo ya se encuentra registrado en el sistema.'
+                : err.error?.message || 'Error al dar de alta el colaborador.';
+            this.mostrarToast(msg, 'danger');
+          },
+        })
     );
   }
 
@@ -387,39 +404,43 @@ export class PersonasPage implements OnInit, OnDestroy {
   abrirModalEditarRol(persona: Persona) {
     this.personaEnEdicion = persona;
     this.nuevoRol = persona.rol;
+    this.guardandoRol = false;
     this.modalRolAbierto = true;
     this.cdr.detectChanges();
   }
 
   cerrarModalEditarRol() {
+    this.guardandoRol = false;
     this.modalRolAbierto = false;
     this.personaEnEdicion = null;
-    this.guardandoRol = false;
     this.cdr.detectChanges();
+    void this.modalRol?.dismiss();
   }
 
   guardarCambioRol() {
     if (!this.personaEnEdicion || !this.fincaActiva?.id) return;
 
+    const fincaId = this.fincaActiva.id;
+    const personaId = this.personaEnEdicion.id;
     this.guardandoRol = true;
     this.cdr.detectChanges();
 
     this.sub.add(
       this.userService
-        .updateUserAssignment(this.personaEnEdicion.id, this.nuevoRol, [
-          this.fincaActiva.id,
-        ])
+        .updateUserAssignment(personaId, this.nuevoRol, [fincaId])
+        .pipe(
+          finalize(() => {
+            this.guardandoRol = false;
+            this.cdr.detectChanges();
+          })
+        )
         .subscribe({
           next: () => {
-            this.guardandoRol = false;
             this.cerrarModalEditarRol();
-            this.cargarPersonal(this.fincaActiva!.id);
-            this.cdr.detectChanges();
             this.mostrarToast('Rol actualizado correctamente.', 'success');
+            void this.cargarPersonal(fincaId);
           },
           error: (err) => {
-            this.guardandoRol = false;
-            this.cdr.detectChanges();
             console.error('Error actualizando rol:', err);
             this.mostrarToast('No se pudo actualizar el rol.', 'danger');
           },
@@ -431,7 +452,13 @@ export class PersonasPage implements OnInit, OnDestroy {
   abrirModalRevocar(persona: Persona) {
     this.personaARevocar = persona;
     this.nombreConfirmacion = '';
+    this.revocando = false;
     this.modalRevocarAbierto = true;
+    this.cdr.detectChanges();
+  }
+
+  actualizarConfirmacion(event: Event) {
+    this.nombreConfirmacion = (event.target as HTMLInputElement).value ?? '';
     this.cdr.detectChanges();
   }
 
@@ -452,23 +479,28 @@ export class PersonasPage implements OnInit, OnDestroy {
       return;
     }
 
+    const fincaId = this.fincaActiva.id;
+    const personaId = this.personaARevocar.id;
     this.revocando = true;
     this.cdr.detectChanges();
 
     this.sub.add(
       this.userService
-        .removeUserFromFarm(this.fincaActiva.id, this.personaARevocar.id)
+        .removeUserFromFarm(fincaId, personaId)
+        .pipe(
+          finalize(() => {
+            this.revocando = false;
+            this.cdr.detectChanges();
+          })
+        )
         .subscribe({
           next: () => {
-            this.revocando = false;
+            this.personas = this.personas.filter((p) => p.id !== personaId);
             this.cerrarModalRevocar();
-            this.cargarPersonal(this.fincaActiva!.id);
-            this.cdr.detectChanges();
             this.mostrarToast('Acceso revocado exitosamente.', 'success');
+            this.cargarPersonal(fincaId);
           },
           error: (err) => {
-            this.revocando = false;
-            this.cdr.detectChanges();
             console.error('Error revocando acceso:', err);
             this.mostrarToast('No se pudo revocar el acceso.', 'danger');
           },
