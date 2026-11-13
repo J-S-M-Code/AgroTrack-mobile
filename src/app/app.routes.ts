@@ -76,5 +76,10 @@ export const routes: Routes = [
     path: 'configuracion',
     loadComponent: () => import('./feature/configuraciones/configuracion.page').then(m => m.ConfiguracionPage),
     canActivate: [authGuard]
+  },
+  {
+    path: 'personas',
+    loadComponent: () => import('./feature/personas/personas.page').then(m => m.PersonasPage),
+    canActivate: [authGuard]
   }
 ];

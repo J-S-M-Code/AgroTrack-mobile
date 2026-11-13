@@ -1,0 +1,415 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    <ion-title>Equipo de Trabajo</ion-title>
+  </ion-toolbar>
+
+  @if (fincaActiva) {
+    <ion-toolbar class="controls-toolbar">
+      <div class="controls-wrapper">
+        <ion-searchbar
+          [(ngModel)]="filtroTexto"
+          placeholder="Buscar por nombre, email o rol..."
+          [debounce]="150"
+          class="personas-searchbar"
+        ></ion-searchbar>
+
+        <ion-segment [(ngModel)]="categoriaSeleccionada" mode="md" [scrollable]="true" class="personas-segment">
+          <ion-segment-button value="TODOS">
+            <ion-label>Todos ({{ personas.length }})</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="OPERATIVO">
+            <ion-label>Operativos</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="TECNICO">
+            <ion-label>Técnicos</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="GESTION">
+            <ion-label>Gestión</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </div>
+    </ion-toolbar>
+  }
+</ion-header>
+
+<ion-content class="ion-padding personas-content">
+  <!-- Pull to Refresh -->
+  @if (fincaActiva) {
+    <ion-refresher slot="fixed" (ionRefresh)="cargarPersonal(fincaActiva.id, $event)">
+      <ion-refresher-content pullingText="Desliza para actualizar..." refreshingSpinner="crescent"></ion-refresher-content>
+    </ion-refresher>
+  }
+
+  <!-- ESTADO 1: SIN FINCA ACTIVA -->
+  @if (!fincaActiva) {
+    <div class="empty-box">
+      <ion-icon name="business-outline" class="empty-icon"></ion-icon>
+      <h3>Sin Finca Seleccionada</h3>
+      <p>Selecciona una finca en el panel principal para gestionar y visualizar su equipo de trabajo.</p>
+      <ion-button routerLink="/home" expand="block" color="primary" class="ion-margin-top">
+        Ir a Mis Fincas
+      </ion-button>
+    </div>
+  } @else if (cargando && personas.length === 0) {
+    <!-- ESTADO 2: CARGANDO -->
+    <div class="empty-box">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p>Cargando equipo de {{ fincaActiva.name }}...</p>
+    </div>
+  } @else if (personasFiltradas.length === 0) {
+    <!-- ESTADO 3: LISTA VACÍA O FILTRO SIN RESULTADOS -->
+    <div class="empty-box">
+      <ion-icon name="people-outline" class="empty-icon"></ion-icon>
+      <h3>No se encontraron colaboradores</h3>
+      @if (filtroTexto || categoriaSeleccionada !== 'TODOS') {
+        <p>No hay miembros que coincidan con los criterios de búsqueda.</p>
+        <ion-button fill="clear" color="primary" (click)="filtroTexto = ''; categoriaSeleccionada = 'TODOS'">
+          Limpiar Filtros
+        </ion-button>
+      } @else {
+        <p>Aún no hay colaboradores asignados a este establecimiento.</p>
+        @if (esOwner) {
+          <ion-button color="primary" (click)="abrirModalAlta()" class="ion-margin-top">
+            <ion-icon name="person-add-outline" slot="start"></ion-icon>
+            Invitar al Primer Miembro
+          </ion-button>
+        }
+      }
+    </div>
+  } @else {
+    <!-- ESTADO 4: GRID DE MIEMBROS -->
+    <div class="personas-list">
+      @for (persona of personasFiltradas; track persona.id) {
+        <ion-card class="persona-card">
+          <ion-card-content>
+            <div class="card-layout">
+              <!-- Avatar Coloreado por Rol -->
+              <div class="avatar-col" [ngClass]="persona.rol.toLowerCase()">
+                {{ obtenerIniciales(persona.nombre) }}
+              </div>
+
+              <!-- Info Principal -->
+              <div class="info-col">
+                <div class="title-row">
+                  <h3 class="member-name">{{ persona.nombre }}</h3>
+                  <div class="status-indicator" [class.pending]="persona.estado === 'Pendiente'">
+                    <span class="status-dot"></span>
+                    {{ persona.estado }}
+                  </div>
+                </div>
+
+                <div class="badge-row">
+                  <ion-badge [color]="persona.colorBadge" class="role-badge">
+                    {{ persona.rolLabel }}
+                  </ion-badge>
+                </div>
+
+                <!-- Contacto Rápido -->
+                <div class="contact-rows">
+                  <a [href]="'mailto:' + persona.email" class="contact-link email">
+                    <ion-icon name="mail-outline"></ion-icon>
+                    <span>{{ persona.email }}</span>
+                  </a>
+
+                  @if (persona.telefono) {
+                    <a [href]="'tel:' + persona.telefono" class="contact-link phone">
+                      <ion-icon name="call-outline"></ion-icon>
+                      <span>{{ persona.telefono }}</span>
+                    </a>
+                  }
+                </div>
+              </div>
+            </div>
+
+            <!-- Acciones de Administración (Solo OWNER) -->
+            @if (esOwner) {
+              <div class="action-footer">
+                <ion-button size="small" fill="outline" color="primary" (click)="abrirModalEditarRol(persona)">
+                  <ion-icon name="create-outline" slot="start"></ion-icon>
+                  Cambiar Rol
+                </ion-button>
+                <ion-button size="small" fill="outline" color="danger" (click)="abrirModalRevocar(persona)">
+                  <ion-icon name="trash-outline" slot="start"></ion-icon>
+                  Revocar
+                </ion-button>
+              </div>
+            }
+          </ion-card-content>
+        </ion-card>
+      }
+    </div>
+  }
+
+  @if (esOwner && fincaActiva) {
+    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+      <ion-fab-button color="primary" (click)="abrirModalAlta()" aria-label="Agregar nuevo miembro">
+        <ion-icon name="add-outline"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
+  }
+</ion-content>
+
+<!-- ==================== MODAL 1: ALTA DE MIEMBRO (DUAL) ==================== -->
+<ion-modal #modalAlta [isOpen]="modalAltaAbierto" (didDismiss)="cerrarModalAlta()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Incorporar al Equipo</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cerrarModalAlta()">Cerrar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+
+      <ion-toolbar color="primary">
+        <ion-segment [(ngModel)]="flujoAlta" (ionChange)="setFlujoAlta($event.detail.value)" mode="md">
+          <ion-segment-button value="asignar">
+            <ion-label>Asignar Existente</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="crear">
+            <ion-label>Registrar Nuevo</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <!-- FLUJO A: ASIGNAR USUARIO EXISTENTE -->
+      @if (flujoAlta === 'asignar') {
+        <div class="modal-form-intro">
+          <h4>Vincular Usuario Registrado</h4>
+          <p>Asigna a una persona que ya posea cuenta en la plataforma AgroTrack indicando su correo.</p>
+        </div>
+
+        <form (ngSubmit)="enviarAlta()">
+          <ion-item lines="inset" class="form-item">
+            <ion-input
+              label="Correo Electrónico *"
+              labelPlacement="stacked"
+              type="email"
+              [(ngModel)]="asignarForm.email"
+              name="emailAsignar"
+              placeholder="usuario@ejemplo.com"
+              required
+            ></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-select
+              label="Rol Asignado *"
+              labelPlacement="stacked"
+              [(ngModel)]="asignarForm.role"
+              name="roleAsignar"
+              interface="popover"
+            >
+              @for (rol of rolesDisponibles; track rol.value) {
+                <ion-select-option [value]="rol.value">{{ rol.label }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+
+          <div class="ion-margin-top">
+            <ion-button expand="block" type="submit" [disabled]="guardandoAlta || !asignarForm.email.trim()" class="btn-save">
+              @if (guardandoAlta) {
+                <ion-spinner name="crescent" slot="start"></ion-spinner>
+                Asignando...
+              } @else {
+                <ion-icon name="person-add-outline" slot="start"></ion-icon>
+                Asignar a la Finca
+              }
+            </ion-button>
+          </div>
+        </form>
+      }
+
+      <!-- FLUJO B: CREAR NUEVO USUARIO -->
+      @if (flujoAlta === 'crear') {
+        <div class="modal-form-intro">
+          <h4>Alta de Nuevo Colaborador</h4>
+          <p>Registra a un nuevo integrante y asígnalo inmediatamente a este establecimiento.</p>
+        </div>
+
+        <form (ngSubmit)="enviarAlta()">
+          <ion-item lines="inset" class="form-item">
+            <ion-input label="Nombre *" labelPlacement="stacked" [(ngModel)]="crearForm.name" name="newName" required></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-input label="Apellido *" labelPlacement="stacked" [(ngModel)]="crearForm.lastName" name="newLastName" required></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-input label="DNI / Documento *" labelPlacement="stacked" [(ngModel)]="crearForm.dni" name="newDni" required></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-input label="Correo Electrónico *" labelPlacement="stacked" type="email" [(ngModel)]="crearForm.email" name="newEmail" required></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-input label="Teléfono Celular" labelPlacement="stacked" type="tel" [(ngModel)]="crearForm.phone" name="newPhone" placeholder="+54 9 ..."></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-input label="Dirección / Localidad" labelPlacement="stacked" [(ngModel)]="crearForm.address" name="newAddress"></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-input label="Contraseña Inicial" labelPlacement="stacked" type="password" [(ngModel)]="crearForm.password" name="newPassword" placeholder="Dejar en blanco para autogenerar"></ion-input>
+          </ion-item>
+
+          <ion-item lines="inset" class="form-item">
+            <ion-select label="Rol *" labelPlacement="stacked" [(ngModel)]="crearForm.role" name="newRole" interface="popover">
+              @for (rol of rolesDisponibles; track rol.value) {
+                <ion-select-option [value]="rol.value">{{ rol.label }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+
+          <ion-item lines="none" class="pref-item">
+            <ion-label>
+              <h3>Enviar invitación por correo</h3>
+              <p>Envía las credenciales y enlace al colaborador</p>
+            </ion-label>
+            <ion-toggle slot="end" [(ngModel)]="crearForm.sendEmail" name="sendEmail"></ion-toggle>
+          </ion-item>
+
+          <div class="ion-margin-top">
+            <ion-button expand="block" type="submit" [disabled]="guardandoAlta || !crearForm.name.trim() || !crearForm.lastName.trim() || !crearForm.dni.trim() || !crearForm.email.trim()" class="btn-save">
+              @if (guardandoAlta) {
+                <ion-spinner name="crescent" slot="start"></ion-spinner>
+                Creando...
+              } @else {
+                <ion-icon name="person-add-outline" slot="start"></ion-icon>
+                Registrar e Incorporar
+              }
+            </ion-button>
+          </div>
+        </form>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<!-- ==================== MODAL 2: EDITAR ROL ==================== -->
+<ion-modal #modalRol [isOpen]="modalRolAbierto" (didDismiss)="cerrarModalEditarRol()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Modificar Rol</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cerrarModalEditarRol()">Cerrar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      @if (personaEnEdicion) {
+        <div class="modal-form-intro">
+          <h4>{{ personaEnEdicion.nombre }}</h4>
+          <p>Selecciona el nuevo rol y nivel de permisos para este colaborador en {{ fincaActiva?.name }}.</p>
+        </div>
+
+        <form (ngSubmit)="guardarCambioRol()">
+          <ion-item lines="inset" class="form-item">
+            <ion-select
+              label="Rol en la Finca *"
+              labelPlacement="stacked"
+              [(ngModel)]="nuevoRol"
+              name="nuevoRolSelect"
+              interface="popover"
+            >
+              @for (rol of rolesDisponibles; track rol.value) {
+                <ion-select-option [value]="rol.value">{{ rol.label }}</ion-select-option>
+              }
+            </ion-select>
+          </ion-item>
+
+          <div class="role-desc-card ion-margin-top">
+            <ion-icon name="shield-checkmark-outline"></ion-icon>
+            <div>
+              @for (r of rolesDisponibles; track r.value) {
+                @if (r.value === nuevoRol) {
+                  <strong>{{ r.label }}</strong>
+                  <p>{{ r.description }}</p>
+                }
+              }
+            </div>
+          </div>
+
+          <div class="action-row ion-margin-top">
+            <ion-button fill="outline" color="medium" (click)="cerrarModalEditarRol()">Cancelar</ion-button>
+            <ion-button type="submit" [disabled]="guardandoRol" class="btn-save">
+              @if (guardandoRol) {
+                <ion-spinner name="crescent" slot="start"></ion-spinner>
+                Guardando...
+              } @else {
+                <ion-icon name="save-outline" slot="start"></ion-icon>
+                Guardar Rol
+              }
+            </ion-button>
+          </div>
+        </form>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<!-- ==================== MODAL 3: REVOCAR ACCESO (FLOTANTE) ==================== -->
+@if (modalRevocarAbierto && personaARevocar) {
+  <div class="modal-overlay" (click)="!revocando && cerrarModalRevocar()">
+    <div class="mbox" (click)="$event.stopPropagation()">
+      <div class="mhead">
+        <div>
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>Revocar Acceso</span>
+        </div>
+        <button type="button" [disabled]="revocando" (click)="cerrarModalRevocar()">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+
+      <div class="ion-padding">
+        <div class="warn-box">
+          <p>
+            Esta acción removerá a <strong>{{ personaARevocar.nombre }}</strong> del equipo de
+            <strong>{{ fincaActiva?.name }}</strong>. Ya no podrá acceder ni registrar datos en esta propiedad.
+          </p>
+        </div>
+
+        <label class="clabel">
+          Escribe <strong>{{ personaARevocar.nombre }}</strong> para confirmar:
+        </label>
+        <input
+          type="text"
+          class="cinput"
+          [value]="nombreConfirmacion"
+          (input)="actualizarConfirmacion($event)"
+          placeholder="Nombre exacto..."
+          [disabled]="revocando"
+        />
+      </div>
+
+      <div class="mfoot">
+        <ion-button fill="outline" color="medium" size="small" [disabled]="revocando" (click)="cerrarModalRevocar()">
+          Cancelar
+        </ion-button>
+        <ion-button
+          color="danger"
+          size="small"
+          [disabled]="revocando || nombreConfirmacion.trim() !== personaARevocar.nombre.trim()"
+          (click)="confirmarRevocacion()"
+        >
+          @if (revocando) {
+            <ion-spinner name="crescent" slot="start"></ion-spinner>
+            Revocando...
+          } @else {
+            Revocar Acceso
+          }
+        </ion-button>
+      </div>
+    </div>
+  </div>
+}
