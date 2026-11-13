@@ -11,8 +11,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
+  Observable,
   Subject,
   forkJoin,
+  from,
   of,
   takeUntil,
   switchMap,
@@ -65,6 +67,9 @@ import { UserService } from '../../../../core/services/user.service';
 import { ContextService } from '../../../../core/services/context.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/auth/services/auth.service';
+import { NetworkService } from '../../../../core/services/network.service';
+import { SyncService } from '../../../../core/services/sync.service';
+import { OutboxAttachment } from '../../../../core/models/sync.model';
 import {
   ACCION_TYPE_OPTIONS,
   AccionType,
@@ -115,6 +120,8 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private taskService = inject(TaskService);
+  private networkService = inject(NetworkService);
+  private syncService = inject(SyncService);
   private lotService = inject(LotService);
   private userService = inject(UserService);
   private authService = inject(AuthService);
@@ -735,8 +742,19 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
     this.isSubmitting = true;
     this.cdr.detectChanges();
 
-    const upload$ =
-      this.fotosAdjuntas.length > 0
+    const offlineMode = !this.networkService.isOnlineSnapshot;
+    const prep$: Observable<string[] | OutboxAttachment[]> = offlineMode
+      ? from(
+          Promise.all(
+            this.fotosAdjuntas.map((foto, idx) =>
+              this.syncService.blobToAttachment(
+                foto.blob,
+                `tarea_${idx + 1}.${foto.ext}`
+              )
+            )
+          )
+        )
+      : this.fotosAdjuntas.length > 0
         ? forkJoin(
             this.fotosAdjuntas.map((foto, idx) =>
               this.taskService.uploadTaskImage(
@@ -749,9 +767,13 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
           )
         : of([] as string[]);
 
-    upload$
+    prep$
       .pipe(
-        switchMap((uploadedPaths: string[]) => {
+        switchMap((result) => {
+          const uploadedPaths = offlineMode ? [] : (result as string[]);
+          const attachments = offlineMode
+            ? (result as OutboxAttachment[])
+            : undefined;
           const dto = {
             title: tituloLimpio,
             accionType: this.accionType,
@@ -767,7 +789,7 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
             polygonLimit: finalPolygon,
             centroid: finalCentroid,
           };
-          return this.taskService.createTask(dto);
+          return this.taskService.createTask(dto, attachments);
         }),
         takeUntil(this.destroy$)
       )
@@ -776,8 +798,10 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
           this.isSubmitting = false;
           this.limpiarFotos();
           await this.mostrarToast(
-            'Tarea operativa creada y notificada.',
-            'success'
+            offlineMode
+              ? 'Tarea guardada sin conexión. Se enviará al recuperar internet.'
+              : 'Tarea operativa creada y notificada.',
+            offlineMode ? 'warning' : 'success'
           );
           this.router.navigate(['/tareas', creada.id], { replaceUrl: true });
         },

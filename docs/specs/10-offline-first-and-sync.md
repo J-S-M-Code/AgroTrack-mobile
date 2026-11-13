@@ -95,13 +95,13 @@ Consolidar la arquitectura **Online-First con Operación Offline Garantizada** e
 ---
 
 ## 5. Plan de Implementación
-- [ ] Crear el archivo de especificación `docs/specs/10-offline-first-and-sync.md`.
-- [ ] Instalar `@capacitor/network` y sincronizar con Android (`npx cap sync android`).
-- [ ] Crear `src/app/core/models/sync.model.ts`.
-- [ ] Implementar `NetworkService` (`src/app/core/services/network.service.ts`) y `OfflineStorageService` (`src/app/core/services/offline-storage.service.ts`).
-- [ ] Implementar `SyncService` (`src/app/core/services/sync.service.ts`) con cola FIFO persistente, reintentos y triggers automáticos.
-- [ ] Extender los servicios de dominio (`farm`, `lot`, `crop`, `task`, `alert`, `animal`) con caché Read-Through Online-First y soporte Outbox para mutaciones offline.
-- [ ] Incorporar el banner global de conectividad y el modal/panel de Cola de Sincronización en `app.component` y `configuracion` (o componente compartido).
-- [ ] Actualizar las vistas operativas principales para mostrar feedback de guardado offline y etiquetas de pendiente de sincronización.
-- [ ] Validar compilación (`npm run build`), presupuesto SCSS (`< 4.00 kB`), sincronización Android (`npx cap sync android`) y pruebas funcionales con modo avión en dispositivo físico.
-- [ ] Actualizar `MEMORY.md`.
+- [x] Crear el archivo de especificación `docs/specs/10-offline-first-and-sync.md`.
+- [x] Instalar `@capacitor/network` y sincronizar con Android (`npx cap sync android`).
+- [x] Crear `src/app/core/models/sync.model.ts`.
+- [x] Implementar `NetworkService` (`src/app/core/services/network.service.ts`) y `OfflineStorageService` (`src/app/core/services/offline-storage.service.ts`).
+- [x] Implementar `SyncService` (`src/app/core/services/sync.service.ts`) con cola FIFO persistente, reintentos y triggers automáticos.
+- [x] Extender los servicios de dominio (`farm`, `lot`, `crop`, `task`, `alert`, `animal`) con caché Read-Through Online-First y soporte Outbox para mutaciones offline.
+- [x] Incorporar el banner global de conectividad y el modal/panel de Cola de Sincronización en `app.component` y `configuracion` (o componente compartido).
+- [x] Actualizar las vistas operativas principales para mostrar feedback de guardado offline y etiquetas de pendiente de sincronización.
+- [x] Validar compilación (`npm run build`), presupuesto SCSS (`< 4.00 kB`), sincronización Android (`npx cap sync android`) y pruebas funcionales con modo avión en dispositivo físico.
+- [x] Actualizar `MEMORY.md`.

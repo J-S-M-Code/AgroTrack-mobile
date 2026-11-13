@@ -10,7 +10,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Subject, forkJoin, of, takeUntil, switchMap, catchError } from 'rxjs';
+import { Observable, Subject, forkJoin, from, of, takeUntil, switchMap, catchError } from 'rxjs';
 import {
   IonHeader,
   IonToolbar,
@@ -60,6 +60,9 @@ import { ContextService } from '../../../../core/services/context.service';
 import { AuthService } from '../../../../core/auth/services/auth.service';
 import { UserService } from '../../../../core/services/user.service';
 import { PermissionService } from '../../../../core/services/permission.service';
+import { NetworkService } from '../../../../core/services/network.service';
+import { SyncService } from '../../../../core/services/sync.service';
+import { OutboxAttachment } from '../../../../core/models/sync.model';
 import {
   ALERT_PRIORITY_OPTIONS,
   AlertPriority,
@@ -109,6 +112,8 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private alertService = inject(AlertService);
+  private networkService = inject(NetworkService);
+  private syncService = inject(SyncService);
   private lotService = inject(LotService);
   private cropService = inject(CropService);
   private animalService = inject(AnimalService);
@@ -780,8 +785,19 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
     this.isSubmitting = true;
     this.cdr.detectChanges();
 
-    const upload$ =
-      this.fotosAdjuntas.length > 0
+    const offlineMode = !this.networkService.isOnlineSnapshot;
+    const prep$: Observable<string[] | OutboxAttachment[]> = offlineMode
+      ? from(
+          Promise.all(
+            this.fotosAdjuntas.map((foto, i) =>
+              this.syncService.blobToAttachment(
+                foto.blob,
+                `evidencia_${i + 1}.${foto.ext}`
+              )
+            )
+          )
+        )
+      : this.fotosAdjuntas.length > 0
         ? forkJoin(
             this.fotosAdjuntas.map((foto, i) =>
               this.alertService.uploadAlertImage(
@@ -794,9 +810,13 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
           )
         : of([] as string[]);
 
-    upload$
+    prep$
       .pipe(
-        switchMap((uploadedPaths: string[]) => {
+        switchMap((result) => {
+          const uploadedPaths = offlineMode ? [] : (result as string[]);
+          const attachments = offlineMode
+            ? (result as OutboxAttachment[])
+            : undefined;
           const dto = {
             title: tituloLimpio,
             alertType: 'MANUAL_NOTE',
@@ -821,7 +841,7 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
             polygonLimit: finalPolygon,
             centroid: finalCentroid,
           };
-          return this.alertService.createAlert(dto, this.farmId);
+          return this.alertService.createAlert(dto, this.farmId, attachments);
         }),
         takeUntil(this.destroy$)
       )
@@ -830,8 +850,10 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
           this.isSubmitting = false;
           this.limpiarFotos();
           await this.mostrarToast(
-            'Novedad registrada exitosamente.',
-            'success'
+            offlineMode
+              ? 'Guardado sin conexión. Se enviará al recuperar internet.'
+              : 'Novedad registrada exitosamente.',
+            offlineMode ? 'warning' : 'success'
           );
           this.router.navigate(['/novedades'], { replaceUrl: true });
         },

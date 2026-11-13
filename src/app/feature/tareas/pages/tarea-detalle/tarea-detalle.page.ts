@@ -11,8 +11,10 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
+  Observable,
   Subject,
   forkJoin,
+  from,
   of,
   takeUntil,
   catchError,
@@ -81,6 +83,9 @@ import { ContextService } from '../../../../core/services/context.service';
 import { LotService } from '../../../../core/services/lot.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { NetworkService } from '../../../../core/services/network.service';
+import { SyncService } from '../../../../core/services/sync.service';
+import { OutboxAttachment } from '../../../../core/models/sync.model';
 import { Tarea } from '../../../../core/models/tarea.model';
 import { Lot } from '../../../../core/models/lot.model';
 
@@ -127,6 +132,8 @@ export class TareaDetallePage
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private taskService = inject(TaskService);
+  private networkService = inject(NetworkService);
+  private syncService = inject(SyncService);
   private contextService = inject(ContextService);
   private lotService = inject(LotService);
   private permissionService = inject(PermissionService);
@@ -490,8 +497,19 @@ export class TareaDetallePage
     this.completeError = '';
     this.cdr.detectChanges();
 
-    const upload$ =
-      this.fotosCierreAdjuntas.length > 0 && targetFarmId
+    const offlineMode = !this.networkService.isOnlineSnapshot;
+    const prep$: Observable<string[] | OutboxAttachment[]> = offlineMode
+      ? from(
+          Promise.all(
+            this.fotosCierreAdjuntas.map((foto, idx) =>
+              this.syncService.blobToAttachment(
+                foto.blob,
+                `cierre_${idx + 1}.${foto.ext}`
+              )
+            )
+          )
+        )
+      : this.fotosCierreAdjuntas.length > 0 && targetFarmId
         ? forkJoin(
             this.fotosCierreAdjuntas.map((foto, idx) =>
               this.taskService.uploadTaskImage(
@@ -504,15 +522,26 @@ export class TareaDetallePage
           )
         : of([] as string[]);
 
-    upload$
+    prep$
       .pipe(
-        switchMap((uploadedPaths) =>
-          this.taskService.updateTaskStatus(this.tarea!.id, 'FINISH', {
-            completionNotes: this.observacionCierreInput.trim() || undefined,
-            completionImages:
-              uploadedPaths.length > 0 ? uploadedPaths : undefined,
-          })
-        ),
+        switchMap((result) => {
+          const uploadedPaths = offlineMode ? [] : (result as string[]);
+          const attachments = offlineMode
+            ? (result as OutboxAttachment[])
+            : undefined;
+          return this.taskService.updateTaskStatus(
+            this.tarea!.id,
+            'FINISH',
+            {
+              completionNotes:
+                this.observacionCierreInput.trim() || undefined,
+              completionImages:
+                uploadedPaths.length > 0 ? uploadedPaths : undefined,
+            },
+            targetFarmId,
+            attachments
+          );
+        }),
         takeUntil(this.destroy$)
       )
       .subscribe({
@@ -521,8 +550,10 @@ export class TareaDetallePage
           this.isCompleteModalOpen = false;
           this.limpiarFotosCierre();
           await this.mostrarToast(
-            '¡Tarea finalizada con éxito!',
-            'success'
+            offlineMode
+              ? 'Cierre guardado sin conexión. Se enviará al recuperar internet.'
+              : '¡Tarea finalizada con éxito!',
+            offlineMode ? 'warning' : 'success'
           );
           this.cargarDetalle();
         },

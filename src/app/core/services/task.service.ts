@@ -1,6 +1,7 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, map, of, throwError } from 'rxjs';
+import { Observable, from, of, throwError } from 'rxjs';
+import { catchError, map, switchMap, tap } from 'rxjs/operators';
 import { environment } from '../../../environments/environment';
 import {
   ACCION_TYPE_OPTIONS,
@@ -11,14 +12,20 @@ import {
   TaskPriority,
   TaskStatus,
 } from '../models/tarea.model';
+import { OutboxAttachment } from '../models/sync.model';
+import { OfflineStorageService } from './offline-storage.service';
+import { NetworkService } from './network.service';
+import { SyncService } from './sync.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class TaskService {
   private apiUrl = environment.apiUrl + '/tasks';
-
-  constructor(private http: HttpClient) {}
+  private http = inject(HttpClient);
+  private storage = inject(OfflineStorageService);
+  private network = inject(NetworkService);
+  private sync = inject(SyncService);
 
   getTasksForCurrentContext(
     farmId: string,
@@ -33,6 +40,13 @@ export class TaskService {
   }
 
   getMyAssignedTasks(farmId?: string): Observable<Tarea[]> {
+    const cacheKey = `tasks_assigned_${farmId || 'all'}`;
+    if (!this.network.isOnlineSnapshot) {
+      return from(this.storage.getCache<Tarea[]>(cacheKey)).pipe(
+        map((cached) => this.reviveDates(cached || []))
+      );
+    }
+
     return this.http.get<any[]>(`${this.apiUrl}/assigned`).pipe(
       map((tasks) => {
         const mapped = (tasks || []).map((t) => this.mapTask(t));
@@ -42,17 +56,44 @@ export class TaskService {
             )
           : mapped;
         return this.sortTasks(filtered);
-      })
+      }),
+      tap((sorted) => {
+        void this.storage.setCache(cacheKey, sorted);
+      }),
+      catchError((err) =>
+        from(this.storage.getCache<Tarea[]>(cacheKey)).pipe(
+          switchMap((cached) =>
+            cached ? of(this.reviveDates(cached)) : throwError(() => err)
+          )
+        )
+      )
     );
   }
 
   getTasksByFarm(farmId: string): Observable<Tarea[]> {
     if (!farmId) return of([]);
+    const cacheKey = `tasks_farm_${farmId}`;
+    if (!this.network.isOnlineSnapshot) {
+      return from(this.storage.getCache<Tarea[]>(cacheKey)).pipe(
+        map((cached) => this.reviveDates(cached || []))
+      );
+    }
+
     return this.http
       .get<any[]>(`${this.apiUrl}/farm/${encodeURIComponent(farmId)}`)
       .pipe(
         map((tasks) =>
           this.sortTasks((tasks || []).map((t) => this.mapTask(t)))
+        ),
+        tap((sorted) => {
+          void this.storage.setCache(cacheKey, sorted);
+        }),
+        catchError((err) =>
+          from(this.storage.getCache<Tarea[]>(cacheKey)).pipe(
+            switchMap((cached) =>
+              cached ? of(this.reviveDates(cached)) : throwError(() => err)
+            )
+          )
         )
       );
   }
@@ -61,35 +102,203 @@ export class TaskService {
     if (!taskId) {
       return throwError(() => new Error('Task ID is missing'));
     }
+    const cacheKey = `task_${taskId}`;
+    if (!this.network.isOnlineSnapshot) {
+      return from(this.storage.getCache<Tarea>(cacheKey)).pipe(
+        switchMap((cached) =>
+          cached
+            ? of(this.reviveDates([cached])[0])
+            : throwError(() => new Error('Sin conexión ni tarea en caché'))
+        )
+      );
+    }
+
     return this.http
       .get<any>(`${this.apiUrl}/${encodeURIComponent(taskId)}`)
-      .pipe(map((t) => this.mapTask(t)));
+      .pipe(
+        map((t) => this.mapTask(t)),
+        tap((mapped) => {
+          void this.storage.setCache(cacheKey, mapped);
+        }),
+        catchError((err) =>
+          from(this.storage.getCache<Tarea>(cacheKey)).pipe(
+            switchMap((cached) =>
+              cached
+                ? of(this.reviveDates([cached])[0])
+                : throwError(() => err)
+            )
+          )
+        )
+      );
   }
 
-  createTask(taskDto: any): Observable<Tarea> {
-    return this.http
-      .post<any>(this.apiUrl, taskDto)
-      .pipe(map((t) => this.mapTask(t)));
+  createTask(
+    taskDto: any,
+    offlineAttachments?: OutboxAttachment[]
+  ): Observable<Tarea> {
+    if (!this.network.isOnlineSnapshot) {
+      return from(this.enqueueOfflineTaskCreate(taskDto, offlineAttachments));
+    }
+
+    return this.http.post<any>(this.apiUrl, taskDto).pipe(
+      map((t) => this.mapTask(t)),
+      catchError((err) => {
+        if ((err?.status ?? 0) === 0) {
+          return from(this.enqueueOfflineTaskCreate(taskDto, offlineAttachments));
+        }
+        return throwError(() => err);
+      })
+    );
   }
 
   updateTaskStatus(
     taskId: string,
     newStatus: TaskStatus,
-    completionData?: { completionNotes?: string; completionImages?: string[] }
+    completionData?: { completionNotes?: string; completionImages?: string[] },
+    farmId?: string,
+    offlineAttachments?: OutboxAttachment[]
   ): Observable<boolean> {
     const body = completionData || {};
+    const endpoint = `/tasks/${encodeURIComponent(taskId)}/status?newStatus=${encodeURIComponent(newStatus)}`;
+
+    if (!this.network.isOnlineSnapshot) {
+      return from(
+        this.enqueueOfflineTaskStatus(
+          taskId,
+          newStatus,
+          body,
+          endpoint,
+          farmId || '',
+          offlineAttachments
+        )
+      );
+    }
+
     return this.http
-      .patch(
-        `${this.apiUrl}/${encodeURIComponent(taskId)}/status?newStatus=${encodeURIComponent(newStatus)}`,
-        body,
-        { responseType: 'text' }
-      )
-      .pipe(map(() => true));
+      .patch(`${environment.apiUrl}${endpoint}`, body, { responseType: 'text' })
+      .pipe(
+        map(() => true),
+        catchError((err) => {
+          if ((err?.status ?? 0) === 0) {
+            return from(
+              this.enqueueOfflineTaskStatus(
+                taskId,
+                newStatus,
+                body,
+                endpoint,
+                farmId || '',
+                offlineAttachments
+              )
+            );
+          }
+          return throwError(() => err);
+        })
+      );
   }
 
   deleteTask(taskId: string, farmId: string, reason: string): Observable<void> {
     const url = `${this.apiUrl}/${encodeURIComponent(taskId)}?farmId=${encodeURIComponent(farmId)}&reason=${encodeURIComponent(reason || 'Sin motivo')}`;
     return this.http.delete<void>(url);
+  }
+
+  private reviveDates(tasks: Tarea[]): Tarea[] {
+    return tasks.map((t) => ({
+      ...t,
+      fechaCreacion: t.fechaCreacion ? new Date(t.fechaCreacion) : new Date(),
+      fechaVencimiento: t.fechaVencimiento
+        ? new Date(t.fechaVencimiento)
+        : new Date(),
+      fechaFinalizacion: t.fechaFinalizacion
+        ? new Date(t.fechaFinalizacion)
+        : undefined,
+    }));
+  }
+
+  private async enqueueOfflineTaskCreate(
+    taskDto: any,
+    attachments?: OutboxAttachment[]
+  ): Promise<Tarea> {
+    const farmId = taskDto.relatedFarmId || '';
+    const tempId = `offline_task_${Date.now()}`;
+    const optimistic = this.mapTask({
+      ...taskDto,
+      id: tempId,
+      creationDate: new Date().toISOString(),
+      taskStatus: 'CREATED',
+    });
+
+    if (farmId) {
+      for (const key of [`tasks_farm_${farmId}`, `tasks_assigned_${farmId}`]) {
+        const current = (await this.storage.getCache<Tarea[]>(key)) || [];
+        await this.storage.setCache(key, this.sortTasks([optimistic, ...current]));
+      }
+    }
+    await this.storage.setCache(`task_${tempId}`, optimistic);
+
+    await this.sync.enqueue({
+      entity: 'TASK',
+      operation: 'CREATE',
+      endpoint: '/tasks',
+      method: 'POST',
+      payload: taskDto,
+      attachments,
+      farmId,
+      description: `Nueva tarea: ${optimistic.titulo}`,
+      localRefId: tempId,
+    });
+
+    return optimistic;
+  }
+
+  private async enqueueOfflineTaskStatus(
+    taskId: string,
+    newStatus: TaskStatus,
+    body: any,
+    endpoint: string,
+    farmId: string,
+    attachments?: OutboxAttachment[]
+  ): Promise<boolean> {
+    const estadoLabel: EstadoTareaLabel =
+      newStatus === 'FINISH'
+        ? 'Completadas'
+        : newStatus === 'IN_PROGESS'
+          ? 'En Progreso'
+          : 'Pendientes';
+
+    const cachedTask = await this.storage.getCache<Tarea>(`task_${taskId}`);
+    if (cachedTask) {
+      await this.storage.setCache(`task_${taskId}`, {
+        ...cachedTask,
+        rawStatus: newStatus,
+        estado: estadoLabel,
+        observacionCierre: body?.completionNotes || cachedTask.observacionCierre,
+      });
+    }
+
+    if (farmId) {
+      for (const key of [`tasks_farm_${farmId}`, `tasks_assigned_${farmId}`]) {
+        const current = await this.storage.getCache<Tarea[]>(key);
+        if (current) {
+          const updated = current.map((t) =>
+            t.id === taskId ? { ...t, rawStatus: newStatus, estado: estadoLabel } : t
+          );
+          await this.storage.setCache(key, updated);
+        }
+      }
+    }
+
+    await this.sync.enqueue({
+      entity: 'TASK',
+      operation: 'STATUS_CHANGE',
+      endpoint,
+      method: 'PATCH',
+      payload: body,
+      attachments,
+      farmId,
+      description: `Cambio de estado de tarea a ${estadoLabel}`,
+    });
+
+    return true;
   }
 
   uploadTaskImage(
