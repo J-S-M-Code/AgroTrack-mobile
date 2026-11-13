@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import { 
   IonHeader, IonToolbar, IonButtons, IonMenuButton, IonTitle, 
   IonContent, IonFab, IonFabButton, IonIcon, IonFabList, 
@@ -750,7 +751,13 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
     };
 
     this.lotService.createLot(this.fincaActiva.id, nuevoLoteDto)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.guardandoLote = false;
+          this.cdr.detectChanges();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (lote) => {
           this.guardandoLote = false;

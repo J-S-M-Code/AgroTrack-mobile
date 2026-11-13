@@ -1,7 +1,6 @@
 import { Injectable, inject, OnDestroy } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, Subject, firstValueFrom } from 'rxjs';
-import { map } from 'rxjs/operators';
 import { Preferences } from '@capacitor/preferences';
 import { App } from '@capacitor/app';
 import { environment } from '../../../environments/environment';
@@ -96,10 +95,9 @@ export class SyncService implements OnDestroy {
         ({ isActive }) => {
           if (
             isActive &&
-            this.networkService.isOnlineSnapshot &&
             this.operationsSubject.value.some((o) => o.status === 'PENDING')
           ) {
-            void this.processQueue();
+            void this.processQueue(true);
           }
         }
       );
@@ -124,33 +122,47 @@ export class SyncService implements OnDestroy {
     return item;
   }
 
-  async processQueue(): Promise<void> {
-    if (this.syncInProgress || !this.networkService.isOnlineSnapshot) {
+  async processQueue(force = false): Promise<void> {
+    if (this.syncInProgress) {
+      return;
+    }
+    if (force) {
+      await this.networkService.checkStatus();
+    }
+    if (!this.networkService.isOnlineSnapshot) {
       return;
     }
 
-    const pending = this.operationsSubject.value.filter(
-      (op) => op.status === 'PENDING'
-    );
-    if (pending.length === 0) return;
+    const pendingIds = this.operationsSubject.value
+      .filter((op) => op.status === 'PENDING')
+      .map((op) => op.id);
+    if (pendingIds.length === 0) return;
 
     this.syncInProgress = true;
     this.isSyncingSubject.next(true);
 
     try {
-      for (const op of pending) {
+      for (const opId of pendingIds) {
         if (!this.networkService.isOnlineSnapshot) break;
+
+        const op = this.operationsSubject.value.find((item) => item.id === opId);
+        if (!op || op.status !== 'PENDING') continue;
 
         await this.updateOperation(op.id, { status: 'SYNCING', lastError: undefined });
 
         try {
           const finalPayload = await this.preparePayloadWithAttachments(op);
-          await this.executeHttpOperation(op, finalPayload);
+          const rawResponse = await this.executeHttpOperation(op, finalPayload);
 
           const remaining = this.operationsSubject.value.filter(
             (item) => item.id !== op.id
           );
-          await this.saveQueue(remaining);
+          const updatedRemaining = this.propagateCreatedId(
+            op,
+            rawResponse,
+            remaining
+          );
+          await this.saveQueue(updatedRemaining);
 
           const nowIso = new Date().toISOString();
           this.lastSyncAtSubject.next(nowIso);
@@ -162,14 +174,14 @@ export class SyncService implements OnDestroy {
           });
         } catch (err: any) {
           const status = err?.status ?? 0;
-          if (status === 0) {
+          if (status === 0 || err?.name === 'TimeoutError') {
             // Se perdió la red durante el envío; reintentar cuando vuelva
             await this.updateOperation(op.id, { status: 'PENDING' });
             break;
           }
 
           const nextRetries = (op.retryCount || 0) + 1;
-          const isTerminal = status >= 400 && status < 500 || nextRetries >= 3;
+          const isTerminal = (status >= 400 && status < 500) || nextRetries >= 3;
           const errorMsg =
             err?.error?.message ||
             err?.message ||
@@ -194,9 +206,7 @@ export class SyncService implements OnDestroy {
       retryCount: 0,
       lastError: undefined,
     });
-    if (this.networkService.isOnlineSnapshot) {
-      await this.processQueue();
-    }
+    await this.processQueue(true);
   }
 
   async retryAllFailed(): Promise<void> {
@@ -206,9 +216,7 @@ export class SyncService implements OnDestroy {
         : op
     );
     await this.saveQueue(updated);
-    if (this.networkService.isOnlineSnapshot) {
-      await this.processQueue();
-    }
+    await this.processQueue(true);
   }
 
   async discardOperation(id: string): Promise<void> {
@@ -253,21 +261,61 @@ export class SyncService implements OnDestroy {
     return payloadCopy;
   }
 
+  private propagateCreatedId(
+    op: OutboxOperation,
+    rawResponse: string | null,
+    queue: OutboxOperation[]
+  ): OutboxOperation[] {
+    if (op.operation !== 'CREATE' || !op.localRefId || !rawResponse) {
+      return queue;
+    }
+
+    let parsed: any = null;
+    try {
+      parsed = JSON.parse(rawResponse);
+    } catch {
+      return queue;
+    }
+
+    const createdId =
+      parsed?.idTask || parsed?.idAlert || parsed?.idCrop || parsed?.id;
+    if (!createdId) {
+      return queue;
+    }
+
+    const realId = String(createdId);
+    const localRef = op.localRefId;
+    return queue.map((item) => {
+      const nextEndpoint = item.endpoint.includes(localRef)
+        ? item.endpoint.split(localRef).join(realId)
+        : item.endpoint;
+      let nextPayload = item.payload;
+      if (item.payload) {
+        const serialized = JSON.stringify(item.payload);
+        if (serialized.includes(localRef)) {
+          nextPayload = JSON.parse(serialized.split(localRef).join(realId));
+        }
+      }
+      if (nextEndpoint !== item.endpoint || nextPayload !== item.payload) {
+        return { ...item, endpoint: nextEndpoint, payload: nextPayload };
+      }
+      return item;
+    });
+  }
+
   private async executeHttpOperation(
     op: OutboxOperation,
     body: any
-  ): Promise<void> {
+  ): Promise<string | null> {
     const url = op.endpoint.startsWith('http')
       ? op.endpoint
       : `${environment.apiUrl}${op.endpoint}`;
 
-    await firstValueFrom(
-      this.http
-        .request(op.method, url, {
-          body: op.method === 'DELETE' ? undefined : body,
-          responseType: 'text',
-        })
-        .pipe(map(() => true))
+    return await firstValueFrom(
+      this.http.request(op.method, url, {
+        body: op.method === 'DELETE' ? undefined : body,
+        responseType: 'text',
+      })
     );
   }
 

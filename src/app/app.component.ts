@@ -129,7 +129,7 @@ export class AppComponent {
   }
 
   sincronizarAhora() {
-    void this.syncService.processQueue();
+    void this.syncService.processQueue(true);
   }
 
   reintentarOperacion(id: string) {

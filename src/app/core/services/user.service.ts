@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, from, map, catchError, switchMap, tap, of } from 'rxjs';
+import { Observable, from, map, catchError, switchMap, tap, of, throwError } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../../environments/environment';
 import { User, UpdateProfileDto, UpdatePasswordDto } from '../models/user.model';
@@ -11,15 +11,18 @@ import {
   AssignUserDto,
   CreatePersonnelDto,
 } from '../models/person.model';
+import { NetworkService } from './network.service';
 
 const USER_PROFILE_KEY = 'agrotrack_user_profile';
 const PERSONNEL_CACHE_PREFIX = 'agrotrack_personnel_';
+const FARM_USERS_CACHE_PREFIX = 'agrotrack_farm_users_';
 
 @Injectable({
   providedIn: 'root',
 })
 export class UserService {
   private http = inject(HttpClient);
+  private network = inject(NetworkService);
   private apiUrl = environment.apiUrl + '/users';
   private memoryUser: User | null = null;
 
@@ -45,6 +48,19 @@ export class UserService {
    * Obtiene el perfil del usuario autenticado bajo estrategia Online-First.
    */
   getCurrentUser(): Observable<User> {
+    if (!this.network.isOnlineSnapshot) {
+      if (this.memoryUser) {
+        return of(this.memoryUser);
+      }
+      return from(this.getCachedUser()).pipe(
+        switchMap((cachedUser) =>
+          cachedUser
+            ? of(cachedUser)
+            : throwError(() => new Error('Sin conexión ni perfil en caché'))
+        )
+      );
+    }
+
     return this.http.get<any>(`${this.apiUrl}/me`).pipe(
       map((u) => this.mapUser(u)),
       tap((user) => {
@@ -64,7 +80,7 @@ export class UserService {
               this.memoryUser = cachedUser;
               return of(cachedUser);
             }
-            throw err;
+            return throwError(() => err);
           })
         );
       })
@@ -126,9 +142,60 @@ export class UserService {
    */
   getUsersByFarm(farmId: string): Observable<User[]> {
     if (!farmId) return of([]);
+
+    if (!this.network.isOnlineSnapshot) {
+      return from(this.getCachedUsersByFarm(farmId)).pipe(
+        map((cached) => cached || [])
+      );
+    }
+
     return this.http
       .get<any[]>(`${this.apiUrl}/farm/${encodeURIComponent(farmId)}`)
-      .pipe(map((users) => (users || []).map((u) => this.mapUser(u))));
+      .pipe(
+        map((users) => (users || []).map((u) => this.mapUser(u))),
+        tap((mapped) => {
+          Preferences.set({
+            key: `${FARM_USERS_CACHE_PREFIX}${farmId}`,
+            value: JSON.stringify(mapped),
+          }).catch(() => {});
+        }),
+        catchError((err) =>
+          from(this.getCachedUsersByFarm(farmId)).pipe(
+            switchMap((cached) =>
+              cached ? of(cached) : throwError(() => err)
+            )
+          )
+        )
+      );
+  }
+
+  async getCachedUsersByFarm(farmId: string): Promise<User[] | null> {
+    if (!farmId) return null;
+    try {
+      const { value } = await Preferences.get({
+        key: `${FARM_USERS_CACHE_PREFIX}${farmId}`,
+      });
+      if (value) {
+        return JSON.parse(value);
+      }
+      const cachedPersonnel = await this.getCachedPersonnel(farmId);
+      if (cachedPersonnel) {
+        return cachedPersonnel.map((p) => ({
+          id: p.id,
+          idUser: p.id,
+          name: p.firstName || p.nombre,
+          lastName: p.lastName || '',
+          email: p.email,
+          role: p.rol,
+          phone: p.telefono,
+          address: p.direccion,
+          active: p.estado === 'Activo',
+        }));
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   // ==================== GESTIÓN DE PERSONAL / EQUIPO ====================
@@ -141,6 +208,12 @@ export class UserService {
    */
   getPersonnelByFarm(farmId: string): Observable<Persona[]> {
     if (!farmId) return of([]);
+
+    if (!this.network.isOnlineSnapshot) {
+      return from(this.getCachedPersonnel(farmId)).pipe(
+        map((cached) => cached || [])
+      );
+    }
 
     return this.http
       .get<any[]>(`${this.apiUrl}/farm/${encodeURIComponent(farmId)}`)
@@ -158,7 +231,7 @@ export class UserService {
               if (cached) {
                 return of(cached);
               }
-              throw err;
+              return throwError(() => err);
             })
           );
         })

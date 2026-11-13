@@ -10,6 +10,8 @@ export class NetworkService implements OnDestroy {
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
   private connectionTypeSubject = new BehaviorSubject<string>('unknown');
+  private hardwareConnected =
+    typeof navigator !== 'undefined' ? navigator.onLine : true;
 
   readonly isOnline$: Observable<boolean> = this.onlineSubject.asObservable();
   readonly connectionType$: Observable<string> =
@@ -25,6 +27,31 @@ export class NetworkService implements OnDestroy {
 
   get isOnlineSnapshot(): boolean {
     return this.onlineSubject.value;
+  }
+
+  get isHardwareConnected(): boolean {
+    return this.hardwareConnected;
+  }
+
+  reportNetworkFailure(): void {
+    if (this.onlineSubject.value) {
+      this.onlineSubject.next(false);
+    }
+  }
+
+  reportNetworkSuccess(): void {
+    this.hardwareConnected = true;
+    if (!this.onlineSubject.value) {
+      this.onlineSubject.next(true);
+    }
+  }
+
+  isNetworkError(err: any): boolean {
+    return (
+      !this.isOnlineSnapshot ||
+      err?.name === 'TimeoutError' ||
+      (err?.status ?? 0) === 0
+    );
   }
 
   async checkStatus(): Promise<boolean> {
@@ -61,6 +88,7 @@ export class NetworkService implements OnDestroy {
   }
 
   private updateStatus(connected: boolean, connectionType: string): void {
+    this.hardwareConnected = connected;
     if (this.onlineSubject.value !== connected) {
       this.onlineSubject.next(connected);
     }

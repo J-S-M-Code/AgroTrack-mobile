@@ -10,7 +10,8 @@ import {
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
-import { Observable, Subject, forkJoin, from, of, takeUntil, switchMap, catchError } from 'rxjs';
+import { Observable, Subject, forkJoin, from, of, throwError } from 'rxjs';
+import { catchError, finalize, map, switchMap, takeUntil } from 'rxjs/operators';
 import {
   IonHeader,
   IonToolbar,
@@ -785,38 +786,51 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
     this.isSubmitting = true;
     this.cdr.detectChanges();
 
-    const offlineMode = !this.networkService.isOnlineSnapshot;
-    const prep$: Observable<string[] | OutboxAttachment[]> = offlineMode
-      ? from(
-          Promise.all(
-            this.fotosAdjuntas.map((foto, i) =>
-              this.syncService.blobToAttachment(
-                foto.blob,
-                `evidencia_${i + 1}.${foto.ext}`
-              )
+    const toAttachments$ = (): Observable<{
+      uploadedPaths: string[];
+      attachments: OutboxAttachment[];
+    }> =>
+      from(
+        Promise.all(
+          this.fotosAdjuntas.map((foto, i) =>
+            this.syncService.blobToAttachment(
+              foto.blob,
+              `evidencia_${i + 1}.${foto.ext}`
             )
           )
         )
-      : this.fotosAdjuntas.length > 0
-        ? forkJoin(
-            this.fotosAdjuntas.map((foto, i) =>
-              this.alertService.uploadAlertImage(
-                foto.blob,
-                foto.ext,
-                this.farmId,
-                i
+      ).pipe(map((attachments) => ({ uploadedPaths: [], attachments })));
+
+    const prep$: Observable<{
+      uploadedPaths: string[];
+      attachments?: OutboxAttachment[];
+    }> =
+      this.fotosAdjuntas.length === 0
+        ? of({ uploadedPaths: [] })
+        : !this.networkService.isOnlineSnapshot
+          ? toAttachments$()
+          : forkJoin(
+              this.fotosAdjuntas.map((foto, i) =>
+                this.alertService.uploadAlertImage(
+                  foto.blob,
+                  foto.ext,
+                  this.farmId,
+                  i
+                )
               )
-            )
-          )
-        : of([] as string[]);
+            ).pipe(
+              map((uploadedPaths) => ({ uploadedPaths })),
+              catchError((err) => {
+                if (this.networkService.isNetworkError(err)) {
+                  return toAttachments$();
+                }
+                return throwError(() => err);
+              })
+            );
 
     prep$
       .pipe(
-        switchMap((result) => {
-          const uploadedPaths = offlineMode ? [] : (result as string[]);
-          const attachments = offlineMode
-            ? (result as OutboxAttachment[])
-            : undefined;
+        switchMap(({ uploadedPaths, attachments }) => {
           const dto = {
             title: tituloLimpio,
             alertType: 'MANUAL_NOTE',
@@ -825,6 +839,7 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
             description: descLimpia,
             createdAt: createdAtStr,
             authorId: this.authorId,
+            authorName: this.autorNombre,
             images: uploadedPaths,
             relatedLotId:
               this.tipoEntidadSeleccionada === 'Lote'
@@ -843,17 +858,25 @@ export class NovedadFormPage implements OnInit, OnDestroy, ViewDidEnter {
           };
           return this.alertService.createAlert(dto, this.farmId, attachments);
         }),
+        finalize(() => {
+          this.isSubmitting = false;
+          this.cdr.detectChanges();
+        }),
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: async () => {
+        next: (creada) => {
           this.isSubmitting = false;
           this.limpiarFotos();
-          await this.mostrarToast(
-            offlineMode
+          this.cdr.detectChanges();
+          const savedOffline =
+            !this.networkService.isOnlineSnapshot ||
+            String(creada?.id || '').startsWith('offline_');
+          void this.mostrarToast(
+            savedOffline
               ? 'Guardado sin conexión. Se enviará al recuperar internet.'
               : 'Novedad registrada exitosamente.',
-            offlineMode ? 'warning' : 'success'
+            savedOffline ? 'warning' : 'success'
           );
           this.router.navigate(['/novedades'], { replaceUrl: true });
         },
