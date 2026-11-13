@@ -1,6 +1,6 @@
 # Spec 11: Conexión Productiva de la App Móvil y APK mediante Cloudflare Tunnel (`agrotrackapp.com.ar`)
 
-**Status:** Draft  
+**Status:** Review  
 **Date:** 2026-11-13  
 **Target Repository:** `AgroTrack Mobile`  
 **Target Branch:** `feature/cloudflare-tunnel`
@@ -54,8 +54,8 @@ Configurar y adaptar la aplicación móvil de AgroTrack para que, al compilarse 
 
 ## 5. Plan de Implementación
 - [x] Crear la rama `feature/cloudflare-tunnel` y el archivo `docs/specs/11-cloudflare-tunnel-connection.md`.
-- [ ] Actualizar `src/environments/environment.ts` y `src/environments/environment.prod.ts` con las URLs de `https://agrotrackapp.com.ar`.
-- [ ] Agregar bypass de `/storage/` y Blob Storage en `src/app/core/auth/interceptors/auth.interceptor.ts`.
-- [ ] Actualizar `resolveImageUrl` en `alert.service.ts` y `task.service.ts` para reescribir hosts internos (`azurite-azuretest`, `localhost:10000`) hacia el proxy `/storage/`.
-- [ ] Ajustar la resolución de `tileUrl` en `mapa.page.ts` y `cultivo-detalle.page.ts`.
-- [ ] Validar compilación (`npm run build`), sincronizar Android (`npx cap sync android`) y actualizar `MEMORY.md`.
+- [x] Actualizar `src/environments/environment.ts` y `src/environments/environment.prod.ts` con las URLs de `https://agrotrackapp.com.ar`.
+- [x] Agregar bypass de `/storage/` y Blob Storage en `src/app/core/auth/interceptors/auth.interceptor.ts`.
+- [x] Actualizar `resolveImageUrl` en `alert.service.ts` y `task.service.ts` para reescribir hosts internos (`azurite-azuretest`, `localhost:10000`) hacia el proxy `/storage/`.
+- [x] Ajustar la resolución de `tileUrl` en `mapa.page.ts` y `cultivo-detalle.page.ts`.
+- [x] Validar compilación (`npm run build`), sincronizar Android (`npx cap sync android`) y actualizar `MEMORY.md`.

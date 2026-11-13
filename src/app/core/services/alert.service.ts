@@ -130,12 +130,27 @@ export class AlertService {
   resolveImageUrl(imagePath: string): string {
     if (!imagePath) return '';
     const trimmed = imagePath.trim();
-    if (
-      trimmed.startsWith('http://') ||
-      trimmed.startsWith('https://') ||
-      trimmed.startsWith('data:') ||
-      trimmed.startsWith('blob:')
-    ) {
+    if (trimmed.startsWith('data:') || trimmed.startsWith('blob:')) {
+      return trimmed;
+    }
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      if (environment.minioBaseUrl.includes('/storage/')) {
+        try {
+          const parsed = new URL(trimmed);
+          if (
+            parsed.hostname === 'localhost' ||
+            parsed.hostname === '127.0.0.1' ||
+            parsed.hostname === 'azurite-azuretest' ||
+            parsed.port === '10000'
+          ) {
+            const storageBase =
+              environment.minioBaseUrl.split('/storage/')[0] + '/storage';
+            return `${storageBase}${parsed.pathname}${parsed.search}`;
+          }
+        } catch {
+          return trimmed;
+        }
+      }
       return trimmed;
     }
     const baseUrl = environment.minioBaseUrl.endsWith('/')

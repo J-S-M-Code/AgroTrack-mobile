@@ -7,7 +7,11 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
 
   const isAuthPublic =
-    req.url.includes('/auth/login') || req.url.includes('/auth/register');
+    req.url.includes('/auth/login') ||
+    req.url.includes('/auth/register') ||
+    req.url.includes('/storage/') ||
+    req.url.includes('blob.core.windows.net') ||
+    req.url.includes(':10000/devstoreaccount1');
 
   if (isAuthPublic) {
     return next(req);

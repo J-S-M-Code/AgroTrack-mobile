@@ -850,10 +850,13 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
       if (mapa.idMap) {
         let layer = this.mapaLayers.get(mapa.idMap);
         if (!layer) {
-          let tileUrl = `${environment.minioBaseUrl}${mapa.tilesBaseUrl}{z}/{x}/{y}.png`;
-          if (tileUrl.includes('azurite-azuretest')) {
-            tileUrl = tileUrl.replace('azurite-azuretest', 'localhost');
-          }
+          const cleanTileBase = (mapa.tilesBaseUrl || '')
+            .replace(/^https?:\/\/[^/]+\/devstoreaccount1\/agrotrack-files\/?/i, '')
+            .replace(/^\/+/, '');
+          const baseMinio = environment.minioBaseUrl.endsWith('/')
+            ? environment.minioBaseUrl
+            : `${environment.minioBaseUrl}/`;
+          const tileUrl = `${baseMinio}${cleanTileBase}{z}/{x}/{y}.png`;
           
           layer = L.tileLayer(tileUrl, { 
             minZoom: 10,
