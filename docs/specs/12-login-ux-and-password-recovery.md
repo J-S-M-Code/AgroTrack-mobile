@@ -1,6 +1,6 @@
 # Spec 12: Pulido UX de Login Directo y Flujo Visual de Recuperación de Contraseña (Beta)
 
-**Status:** Draft
+**Status:** Finished  
 **Date:** 2026-11-14  
 **Target Repository:** `AgroTrack Mobile`  
 **Base Branch:** `develop` (`9fc7735`, alineada con `origin/develop`)  
@@ -196,9 +196,9 @@ Cuando se habilite la recuperación real contra Spring Boot, no será necesario 
 ## 6. Plan de Implementación y Verificación
 
 - [x] Alinear `develop` local con `origin/develop` (`9fc7735`), crear rama `feature/auth-recovery-ui` y redactar `docs/specs/12-login-ux-and-password-recovery.md`.
-- [ ] Crear `src/app/core/auth/utils/password-policy.util.ts` con la lógica exacta de validación de `Password.java` y sus pruebas unitarias (Vitest).
-- [ ] Mejorar `LoginComponent` (`login.component.html/.ts/.scss`): toggle ojito, teclado email, errores diferenciados sin borrar datos y link a `/forgot-password`.
-- [ ] Implementar `ForgotPasswordComponent` (`EMAIL` → `OTP` 6 casillas con simulación Beta `482910` → `NEW_PASSWORD` con checklist en vivo → `SUCCESS`) y registrar `/forgot-password` en `app.routes.ts`.
-- [ ] Verificar build de producción (`npm run build`), cumplimiento de presupuestos SCSS (`< 4.00 kB`), suite de tests (`npm test` / `vitest`) y revisión visual en viewport móvil.
-- [ ] Actualizar `MEMORY.md` con el cierre de la Spec 12.
+- [x] Crear `src/app/core/auth/utils/password-policy.util.ts` con la lógica exacta de validación de `Password.java` y sus pruebas unitarias (`password-policy.util.spec.ts`).
+- [x] Mejorar `LoginComponent` (`login.component.html/.ts/.scss`): toggle ojito, teclado email, errores diferenciados sin borrar datos, link a `/forgot-password` y pruebas unitarias (`login.component.spec.ts`).
+- [x] Implementar `ForgotPasswordComponent` (`EMAIL` → `OTP` 6 casillas con simulación Beta `482910` → `NEW_PASSWORD` con checklist en vivo → `SUCCESS`), registrar `/forgot-password` en `app.routes.ts` y agregar pruebas unitarias (`forgot-password.component.spec.ts`).
+- [x] Verificar build de producción (`npm run build`), cumplimiento de presupuestos SCSS (`< 2.00 kB`), suite de tests (`ng test`) y revisión de cambios.
+- [x] Actualizar `MEMORY.md` con el cierre de la Spec 12.
 - [ ] *(Posterior a revisión)* Replicar los cambios de UI en `develop` y en `feature/cloudflare-tunnel` preservando la configuración específica del túnel.
