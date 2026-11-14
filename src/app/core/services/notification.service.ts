@@ -6,8 +6,9 @@ import {
   Subscription,
   combineLatest,
   firstValueFrom,
+  of,
 } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { catchError, map } from 'rxjs/operators';
 import { ToastController } from '@ionic/angular';
 import { Capacitor } from '@capacitor/core';
 import { App } from '@capacitor/app';
@@ -20,6 +21,11 @@ import { TaskService } from './task.service';
 import { PermissionService } from './permission.service';
 import { AuthService } from '../auth/services/auth.service';
 import { FarmService } from './farm.service';
+import { LotService } from './lot.service';
+import { CropService } from './crop.service';
+import { AnimalService } from './animal.service';
+import { UserService } from './user.service';
+import { NetworkService } from './network.service';
 import { Novedad } from '../models/novedad.model';
 import { Tarea } from '../models/tarea.model';
 
@@ -32,6 +38,11 @@ export class NotificationService implements OnDestroy {
   private alertService = inject(AlertService);
   private taskService = inject(TaskService);
   private farmService = inject(FarmService);
+  private lotService = inject(LotService);
+  private cropService = inject(CropService);
+  private animalService = inject(AnimalService);
+  private userService = inject(UserService);
+  private networkService = inject(NetworkService);
   private permissionService = inject(PermissionService);
   private authService = inject(AuthService);
   private toastCtrl = inject(ToastController);
@@ -56,6 +67,7 @@ export class NotificationService implements OnDestroy {
   public incomingTask$ = this.incomingTaskSubject.asObservable();
 
   private contextSub?: Subscription;
+  private networkSub?: Subscription;
   private currentAlertsSub?: Subscription;
   private taskSubscriptions: Map<string, Subscription> = new Map();
   private farmsCache: Map<string, string> = new Map();
@@ -75,6 +87,15 @@ export class NotificationService implements OnDestroy {
     this.loadGlobalPendingCounts();
     this.syncFarmTaskSubscriptions();
 
+    this.networkSub = this.networkService.isOnline$.subscribe((online) => {
+      if (online) {
+        void this.syncFarmTaskSubscriptions();
+        if (this.currentFarmId) {
+          this.warmUpFarmCache(this.currentFarmId);
+        }
+      }
+    });
+
     this.contextSub = this.contextService.selectedFarm$.subscribe((farm) => {
       const nextFarmId = farm?.id || null;
       if (nextFarmId !== this.currentFarmId) {
@@ -85,6 +106,10 @@ export class NotificationService implements OnDestroy {
           this.resetCount();
           this.permissionService.ensureNotificationPermission().catch(() => {});
           this.verificarPendientesAlConectar(nextFarmId);
+
+          if (this.networkService.isOnlineSnapshot) {
+            this.warmUpFarmCache(nextFarmId, farm?.myRole || null);
+          }
 
           this.currentAlertsSub = this.websocketService
             .watchAlerts(nextFarmId)
@@ -133,11 +158,27 @@ export class NotificationService implements OnDestroy {
     });
   }
 
+  private warmUpFarmCache(farmId: string, role?: string | null): void {
+    if (!farmId || !this.networkService.isOnlineSnapshot) return;
+    this.lotService.getLotsByFarm(farmId).pipe(catchError(() => of([]))).subscribe();
+    this.cropService.getCropsByFarm(farmId).pipe(catchError(() => of([]))).subscribe();
+    this.animalService.getAnimalsByFarm(farmId).pipe(catchError(() => of([]))).subscribe();
+    this.userService.getUsersByFarm(farmId).pipe(catchError(() => of([]))).subscribe();
+    this.alertService.getAlertsByFarm(farmId).pipe(catchError(() => of([]))).subscribe();
+    this.taskService
+      .getTasksForCurrentContext(farmId, role ?? null)
+      .pipe(catchError(() => of([])))
+      .subscribe();
+  }
+
   /**
    * Sincroniza suscripciones de WebSocket a los tópicos de tareas de TODAS las fincas del usuario.
    * Permite recibir avisos push/toast de cualquier finca aunque el usuario esté en el Home u otra finca.
    */
   public async syncFarmTaskSubscriptions() {
+    if (!this.networkService.isOnlineSnapshot) {
+      return;
+    }
     try {
       const fincas = await firstValueFrom(this.farmService.getFincas());
       const currentUserId = await this.authService.getUserId();
@@ -446,6 +487,7 @@ export class NotificationService implements OnDestroy {
       document.removeEventListener('visibilitychange', this.onVisibilityChange);
     }
     this.contextSub?.unsubscribe();
+    this.networkSub?.unsubscribe();
     this.currentAlertsSub?.unsubscribe();
     for (const sub of this.taskSubscriptions.values()) {
       sub.unsubscribe();

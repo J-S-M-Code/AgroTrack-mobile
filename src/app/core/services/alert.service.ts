@@ -279,12 +279,17 @@ export class AlertService {
     const optimistic = this.mapAlert({
       ...alertDto,
       id: tempId,
-      createdAt: new Date().toISOString(),
-      images: attachments?.map((a) => a.dataUrl) || [],
+      createdAt: alertDto.createdAt || new Date().toISOString(),
+      images: [
+        ...(alertDto.images || []),
+        ...(attachments?.map((a) => a.dataUrl) || []),
+      ],
     });
 
     const cacheKey = `alerts_${farmId}`;
-    const current = (await this.storage.getCache<Novedad[]>(cacheKey)) || [];
+    const current = this.reviveDates(
+      (await this.storage.getCache<Novedad[]>(cacheKey)) || []
+    );
     await this.storage.setCache(cacheKey, [optimistic, ...current]);
     await this.storage.setCache(`alert_${tempId}`, optimistic);
 

@@ -1,10 +1,41 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
-import { from, switchMap } from 'rxjs';
+import { NetworkService } from '../../services/network.service';
+import { TimeoutError, catchError, from, switchMap, tap, throwError, timeout } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
+  const networkService = inject(NetworkService);
+
+  const sendWithTimeout = (request: HttpRequest<unknown>) => {
+    const requestTimeoutMs = request.url.includes('/images') ? 7000 : 3500;
+    return next(request).pipe(
+      timeout(requestTimeoutMs),
+      tap(() => networkService.reportNetworkSuccess()),
+      catchError((err) => {
+        if (
+          err instanceof TimeoutError ||
+          err?.name === 'TimeoutError' ||
+          (err?.status ?? 0) === 0
+        ) {
+          networkService.reportNetworkFailure();
+          if (err instanceof TimeoutError || err?.name === 'TimeoutError') {
+            return throwError(
+              () =>
+                new HttpErrorResponse({
+                  error: err,
+                  status: 0,
+                  statusText: 'Gateway Timeout / Offline',
+                  url: request.url,
+                })
+            );
+          }
+        }
+        return throwError(() => err);
+      })
+    );
+  };
 
   const isAuthPublic =
     req.url.includes('/auth/login') ||
@@ -14,7 +45,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     req.url.includes(':10000/devstoreaccount1');
 
   if (isAuthPublic) {
-    return next(req);
+    return sendWithTimeout(req);
   }
 
   const isRefreshEndpoint = req.url.includes('/auth/refresh');
@@ -30,9 +61,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             Authorization: `Bearer ${token}`,
           },
         });
-        return next(cloned);
+        return sendWithTimeout(cloned);
       }
-      return next(req);
+      return sendWithTimeout(req);
     })
   );
 };

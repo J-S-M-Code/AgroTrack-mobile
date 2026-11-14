@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin, of, takeUntil, filter, take, catchError } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import {
   IonHeader,
   IonToolbar,
@@ -64,6 +65,7 @@ import { SpectralMapService } from '../../../../core/services/spectral-map.servi
 import { AlertService } from '../../../../core/services/alert.service';
 import { TaskService } from '../../../../core/services/task.service';
 import { ContextService } from '../../../../core/services/context.service';
+import { NetworkService } from '../../../../core/services/network.service';
 import { environment } from '../../../../../environments/environment';
 import {
   Cultivo,
@@ -119,6 +121,7 @@ export class CultivoDetallePage
   private alertService = inject(AlertService);
   private taskService = inject(TaskService);
   private contextService = inject(ContextService);
+  private networkService = inject(NetworkService);
   private toastCtrl = inject(ToastController);
   private cdr = inject(ChangeDetectorRef);
 
@@ -668,16 +671,26 @@ export class CultivoDetallePage
 
     this.cropService
       .registerHarvest(this.cultivo.id, targetFarm, fechaIso)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.guardandoAccion = false;
+          this.cdr.detectChanges();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: () => {
           this.guardandoAccion = false;
           this.isModalCosechaOpen = false;
-          this.mostrarToast(
-            this.cultivo?.isPerennial
-              ? 'Cosecha registrada. Ciclo perenne reprogramado.'
-              : 'Cosecha registrada exitosamente.',
-            'success'
+          this.cdr.detectChanges();
+          const savedOffline = !this.networkService.isOnlineSnapshot;
+          void this.mostrarToast(
+            savedOffline
+              ? 'Cosecha guardada sin conexión. Se enviará al recuperar internet.'
+              : this.cultivo?.isPerennial
+                ? 'Cosecha registrada. Ciclo perenne reprogramado.'
+                : 'Cosecha registrada exitosamente.',
+            savedOffline ? 'warning' : 'success'
           );
           this.cargarTodo(false);
         },
@@ -714,12 +727,25 @@ export class CultivoDetallePage
 
     this.cropService
       .updatePhenologicalState(this.cultivo.id, this.nuevoEstadoSeleccionado, targetFarm)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.guardandoAccion = false;
+          this.cdr.detectChanges();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: () => {
           this.guardandoAccion = false;
           this.isModalEstadoOpen = false;
-          this.mostrarToast('Estado fenológico actualizado.', 'success');
+          this.cdr.detectChanges();
+          const savedOffline = !this.networkService.isOnlineSnapshot;
+          void this.mostrarToast(
+            savedOffline
+              ? 'Estado guardado sin conexión. Se enviará al recuperar internet.'
+              : 'Estado fenológico actualizado.',
+            savedOffline ? 'warning' : 'success'
+          );
           this.cargarTodo(false);
         },
         error: (err) => {
@@ -783,7 +809,10 @@ export class CultivoDetallePage
     return err.error?.message || err.error?.detail || err.error?.error || '';
   }
 
-  private async mostrarToast(message: string, color: 'success' | 'danger' | 'dark' = 'dark') {
+  private async mostrarToast(
+    message: string,
+    color: 'success' | 'danger' | 'warning' | 'dark' = 'dark'
+  ) {
     const toast = await this.toastCtrl.create({
       message,
       duration: 2400,

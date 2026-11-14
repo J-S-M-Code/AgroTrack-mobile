@@ -1,15 +1,17 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'io.ionic.starter',
+  appId: 'com.agrotrack.app',
   appName: 'AgroTrack',
   webDir: 'www',
   server: {
-    androidScheme: 'http',
-    cleartext: true
+    androidScheme: 'https',
+    cleartext: false
   },
   android: {
-    allowMixedContent: true
+    allowMixedContent: false,
+    webContentsDebuggingEnabled: false,
+    loggingBehavior: 'none'
   },
   plugins: {
     LocalNotifications: {

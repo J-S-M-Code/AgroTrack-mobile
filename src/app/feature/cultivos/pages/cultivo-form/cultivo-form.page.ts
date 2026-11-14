@@ -3,6 +3,7 @@ import { CommonModule, Location } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin, of, takeUntil, filter, take } from 'rxjs';
+import { finalize } from 'rxjs/operators';
 import {
   IonHeader,
   IonToolbar,
@@ -39,6 +40,7 @@ import * as L from 'leaflet';
 import { CropService } from '../../../../core/services/crop.service';
 import { LotService } from '../../../../core/services/lot.service';
 import { ContextService } from '../../../../core/services/context.service';
+import { NetworkService } from '../../../../core/services/network.service';
 import {
   CropUpsertDto,
   PhenologicalState,
@@ -82,6 +84,7 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
   private cropService = inject(CropService);
   private lotService = inject(LotService);
   private contextService = inject(ContextService);
+  private networkService = inject(NetworkService);
   private toastCtrl = inject(ToastController);
   private cdr = inject(ChangeDetectorRef);
 
@@ -403,35 +406,50 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
       ? this.cropService.updateCrop(this.cultivoId, dto, this.farmId)
       : this.cropService.registerCrop(this.selectedLotId, dto, this.farmId);
 
-    request$.pipe(takeUntil(this.destroy$)).subscribe({
-      next: (saved) => {
-        this.guardando = false;
-        this.mostrarToast(
-          this.esEdicion
-            ? 'Cultivo actualizado exitosamente.'
-            : 'Cultivo registrado exitosamente.',
-          'success'
-        );
+    request$
+      .pipe(
+        finalize(() => {
+          this.guardando = false;
+          this.cdr.detectChanges();
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (saved) => {
+          this.guardando = false;
+          this.cdr.detectChanges();
+          const savedOffline =
+            !this.networkService.isOnlineSnapshot ||
+            String(saved?.id || '').startsWith('offline_');
 
-        if (this.esEdicion) {
-          this.location.back();
-        } else if (saved?.id) {
-          this.router.navigate(['/cultivos', saved.id], { replaceUrl: true });
-        } else {
-          this.router.navigate(['/cultivos'], { replaceUrl: true });
-        }
-      },
-      error: (err) => {
-        console.error('Error guardando cultivo:', err);
-        this.guardando = false;
-        this.mensajeError =
-          this.extraerMensajeError(err) ||
-          (this.esEdicion
-            ? 'Hubo un error al actualizar el cultivo.'
-            : 'Hubo un error al registrar el cultivo.');
-        this.cdr.detectChanges();
-      },
-    });
+          void this.mostrarToast(
+            savedOffline
+              ? 'Guardado sin conexión. Se enviará al recuperar internet.'
+              : this.esEdicion
+                ? 'Cultivo actualizado exitosamente.'
+                : 'Cultivo registrado exitosamente.',
+            savedOffline ? 'warning' : 'success'
+          );
+
+          if (this.esEdicion) {
+            this.location.back();
+          } else if (saved?.id) {
+            this.router.navigate(['/cultivos', saved.id], { replaceUrl: true });
+          } else {
+            this.router.navigate(['/cultivos'], { replaceUrl: true });
+          }
+        },
+        error: (err) => {
+          console.error('Error guardando cultivo:', err);
+          this.guardando = false;
+          this.mensajeError =
+            this.extraerMensajeError(err) ||
+            (this.esEdicion
+              ? 'Hubo un error al actualizar el cultivo.'
+              : 'Hubo un error al registrar el cultivo.');
+          this.cdr.detectChanges();
+        },
+      });
   }
 
   cancelar() {
@@ -458,7 +476,10 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
     return err.error?.message || err.error?.detail || err.error?.error || '';
   }
 
-  private async mostrarToast(message: string, color: 'success' | 'danger' | 'dark' = 'dark') {
+  private async mostrarToast(
+    message: string,
+    color: 'success' | 'danger' | 'warning' | 'dark' = 'dark'
+  ) {
     const toast = await this.toastCtrl.create({
       message,
       duration: 2400,

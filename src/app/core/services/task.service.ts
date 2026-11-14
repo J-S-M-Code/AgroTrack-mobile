@@ -225,11 +225,17 @@ export class TaskService {
       id: tempId,
       creationDate: new Date().toISOString(),
       taskStatus: 'CREATED',
+      images: [
+        ...(taskDto.images || []),
+        ...(attachments?.map((a) => a.dataUrl) || []),
+      ],
     });
 
     if (farmId) {
       for (const key of [`tasks_farm_${farmId}`, `tasks_assigned_${farmId}`]) {
-        const current = (await this.storage.getCache<Tarea[]>(key)) || [];
+        const current = this.reviveDates(
+          (await this.storage.getCache<Tarea[]>(key)) || []
+        );
         await this.storage.setCache(key, this.sortTasks([optimistic, ...current]));
       }
     }
@@ -265,25 +271,62 @@ export class TaskService {
           ? 'En Progreso'
           : 'Pendientes';
 
-    const cachedTask = await this.storage.getCache<Tarea>(`task_${taskId}`);
+    const rawCachedTask = await this.storage.getCache<Tarea>(`task_${taskId}`);
+    const cachedTask = rawCachedTask ? this.reviveDates([rawCachedTask])[0] : null;
+    const effectiveFarmId = farmId || cachedTask?.fincaId || '';
+    const completionUrls = [
+      ...(body?.completionImages || []),
+      ...(attachments?.map((a) => a.dataUrl) || []),
+    ];
+
     if (cachedTask) {
       await this.storage.setCache(`task_${taskId}`, {
         ...cachedTask,
         rawStatus: newStatus,
         estado: estadoLabel,
         observacionCierre: body?.completionNotes || cachedTask.observacionCierre,
+        rawImagenesCierre:
+          completionUrls.length > 0
+            ? [...(cachedTask.rawImagenesCierre || []), ...completionUrls]
+            : cachedTask.rawImagenesCierre,
+        imagenesCierre:
+          completionUrls.length > 0
+            ? [...(cachedTask.imagenesCierre || []), ...completionUrls]
+            : cachedTask.imagenesCierre,
+        fechaFinalizacion:
+          newStatus === 'FINISH' ? new Date() : cachedTask.fechaFinalizacion,
       });
     }
 
-    if (farmId) {
-      for (const key of [`tasks_farm_${farmId}`, `tasks_assigned_${farmId}`]) {
-        const current = await this.storage.getCache<Tarea[]>(key);
-        if (current) {
-          const updated = current.map((t) =>
-            t.id === taskId ? { ...t, rawStatus: newStatus, estado: estadoLabel } : t
-          );
-          await this.storage.setCache(key, updated);
-        }
+    const keysToUpdate = effectiveFarmId
+      ? [`tasks_farm_${effectiveFarmId}`, `tasks_assigned_${effectiveFarmId}`, 'tasks_assigned_all']
+      : ['tasks_assigned_all'];
+
+    for (const key of keysToUpdate) {
+      const rawCurrent = await this.storage.getCache<Tarea[]>(key);
+      if (rawCurrent) {
+        const current = this.reviveDates(rawCurrent);
+        const updated = current.map((t) =>
+          t.id === taskId
+            ? {
+                ...t,
+                rawStatus: newStatus,
+                estado: estadoLabel,
+                observacionCierre: body?.completionNotes || t.observacionCierre,
+                rawImagenesCierre:
+                  completionUrls.length > 0
+                    ? [...(t.rawImagenesCierre || []), ...completionUrls]
+                    : t.rawImagenesCierre,
+                imagenesCierre:
+                  completionUrls.length > 0
+                    ? [...(t.imagenesCierre || []), ...completionUrls]
+                    : t.imagenesCierre,
+                fechaFinalizacion:
+                  newStatus === 'FINISH' ? new Date() : t.fechaFinalizacion,
+              }
+            : t
+        );
+        await this.storage.setCache(key, this.sortTasks(updated));
       }
     }
 
@@ -294,7 +337,7 @@ export class TaskService {
       method: 'PATCH',
       payload: body,
       attachments,
-      farmId,
+      farmId: effectiveFarmId,
       description: `Cambio de estado de tarea a ${estadoLabel}`,
     });
 
@@ -431,11 +474,20 @@ export class TaskService {
     };
   }
 
+  private toTimestamp(value?: Date | string | null): number {
+    if (!value) return 0;
+    const ms = value instanceof Date ? value.getTime() : new Date(value).getTime();
+    return isNaN(ms) ? 0 : ms;
+  }
+
   private sortTasks(tasks: Tarea[]): Tarea[] {
     return [...tasks].sort((a, b) => {
       if (a.rawStatus === 'FINISH' && b.rawStatus !== 'FINISH') return 1;
       if (a.rawStatus !== 'FINISH' && b.rawStatus === 'FINISH') return -1;
-      return a.fechaVencimiento.getTime() - b.fechaVencimiento.getTime();
+      return (
+        this.toTimestamp(a.fechaVencimiento) -
+        this.toTimestamp(b.fechaVencimiento)
+      );
     });
   }
 }

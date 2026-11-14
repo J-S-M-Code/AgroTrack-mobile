@@ -308,6 +308,16 @@ export class CropService {
     );
     await this.storage.setCache(`crops_${farmId}`, updatedList);
 
+    const directCrop = await this.storage.getCache<Cultivo>(`crop_${id}`);
+    const existing = directCrop || list.find((c) => c.id === id);
+    if (existing) {
+      await this.storage.setCache(`crop_${id}`, {
+        ...existing,
+        phenologicalState: state,
+        estado: PHENOLOGICAL_STATE_LABELS[state],
+      });
+    }
+
     await this.sync.enqueue({
       entity: 'CROP',
       operation: 'STATUS_CHANGE',
@@ -336,6 +346,16 @@ export class CropService {
         : c
     );
     await this.storage.setCache(`crops_${farmId}`, updatedList);
+
+    const directCrop = await this.storage.getCache<Cultivo>(`crop_${id}`);
+    const existing = directCrop || list.find((c) => c.id === id);
+    if (existing) {
+      await this.storage.setCache(`crop_${id}`, {
+        ...existing,
+        phenologicalState: 'HARVESTED' as PhenologicalState,
+        estado: PHENOLOGICAL_STATE_LABELS['HARVESTED'],
+      });
+    }
 
     await this.sync.enqueue({
       entity: 'CROP',

@@ -4,6 +4,7 @@ import { Observable, of, from, map, tap, catchError, switchMap } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../../environments/environment';
 import { Collar, CollarEstadoLabel, CollarStateBackend } from '../models/collar.model';
+import { NetworkService } from './network.service';
 
 const COLLARS_CACHE_PREFIX = 'agrotrack_collars_';
 
@@ -12,6 +13,7 @@ const COLLARS_CACHE_PREFIX = 'agrotrack_collars_';
 })
 export class CollarService {
   private http = inject(HttpClient);
+  private network = inject(NetworkService);
   private apiUrl = environment.apiUrl;
 
   /**
@@ -22,6 +24,12 @@ export class CollarService {
    */
   getCollarsByFarm(farmId: string): Observable<Collar[]> {
     if (!farmId) return of([]);
+
+    if (!this.network.isOnlineSnapshot) {
+      return from(this.getCachedCollars(farmId)).pipe(
+        map((cached) => cached || [])
+      );
+    }
 
     return this.http
       .get<any[]>(`${this.apiUrl}/farms/${encodeURIComponent(farmId)}/collars`)
