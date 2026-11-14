@@ -13,15 +13,21 @@ $RECYCLE.BIN/
 log.txt
 
 
+# IA
+MEMORY.md
+AGENTS.md
+
 /.sourcemaps
 /.versions
 /coverage
 
-# Ionic
+# Ionic & Capacitor
 /.ionic
 /www
 /platforms
 /plugins
+/android
+/ios
 
 # Compiled output
 /dist

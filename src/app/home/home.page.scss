@@ -1,27 +1,235 @@
-#container {
-  text-align: center;
-
+.notification-badge {
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  top: 4px;
+  right: 4px;
+  font-size: 0.6rem;
+  padding: 3px 5px;
+  border-radius: 50%;
 }
 
-#container strong {
-  font-size: 20px;
-  line-height: 26px;
+.dashboard-header {
+  margin-bottom: 1.5rem;
+  
+  h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: var(--ion-color-dark);
+  }
+  
+  p {
+    color: var(--ion-color-medium);
+    margin: 0;
+  }
 }
 
-#container p {
-  font-size: 16px;
-  line-height: 22px;
+.loading-container, .empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--ion-color-medium);
+  text-align: center;
+  
+  ion-spinner {
+    margin-bottom: 1rem;
+  }
+}
 
-  color: #8c8c8c;
+.fincas-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
 
+.finca-card {
   margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+
+  ion-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+  }
+
+  ion-card-subtitle {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+    text-transform: none;
+  }
+
+  .weather-box {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--ion-color-light);
+    border-radius: 8px;
+    padding: 10px;
+    margin-top: 10px;
+
+    &.empty-weather {
+      justify-content: center;
+      color: var(--ion-color-medium);
+      font-size: 0.9rem;
+    }
+
+    .weather-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      
+      .temperature {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: var(--ion-color-dark);
+      }
+    }
+
+    .weather-details {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85rem;
+      color: var(--ion-color-medium);
+      
+      p {
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+    }
+  }
 }
 
-#container a {
-  text-decoration: none;
+.empty-notifications {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--ion-color-medium);
+
+  .empty-icon {
+    font-size: 3.5rem;
+    margin-bottom: 0.75rem;
+  }
+
+  h3 {
+    margin: 0 0 0.5rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--ion-color-dark);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+  }
+}
+
+.notifications-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+
+  h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ion-color-dark);
+  }
+}
+
+.notification-item {
+  --background: #f8fafc;
+  --border-radius: 12px;
+  --padding-start: 12px;
+  --padding-end: 8px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+
+  .item-content {
+    width: 100%;
+    padding: 6px 0;
+  }
+
+  .item-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+  }
+
+  .farm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    background: rgba(13, 138, 92, 0.12);
+    color: var(--ion-color-primary, #0d8a5c);
+    max-width: 160px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    ion-icon {
+      font-size: 0.82rem;
+      flex-shrink: 0;
+    }
+  }
+
+  .priority-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 6px;
+    text-transform: uppercase;
+
+    &.alta {
+      background: rgba(235, 68, 90, 0.15);
+      color: var(--ion-color-danger);
+    }
+    &.media {
+      background: rgba(255, 196, 9, 0.2);
+      color: #b78103;
+    }
+    &.baja {
+      background: rgba(13, 138, 92, 0.15);
+      color: var(--ion-color-primary);
+    }
+  }
+
+  .action-tag {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--ion-color-medium);
+  }
+
+  .task-title {
+    margin: 4px 0 2px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--ion-color-dark);
+  }
+
+  .task-meta {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--ion-color-medium);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
 }
