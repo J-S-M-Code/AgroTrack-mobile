@@ -20,6 +20,9 @@
           <ion-icon name="mail-outline" slot="start" color="medium"></ion-icon>
           <ion-input 
             type="email" 
+            inputmode="email"
+            autocomplete="email"
+            autocapitalize="off"
             name="email" 
             [(ngModel)]="credentials.email" 
             required 
@@ -32,7 +35,8 @@
         <ion-item>
           <ion-icon name="lock-closed-outline" slot="start" color="medium"></ion-icon>
           <ion-input 
-            type="password" 
+            [type]="showPassword ? 'text' : 'password'"
+            autocomplete="current-password"
             name="password" 
             [(ngModel)]="credentials.password" 
             required 
@@ -40,6 +44,16 @@
             label="Contraseña"
             labelPlacement="floating"
           ></ion-input>
+          <ion-button
+            fill="clear"
+            slot="end"
+            type="button"
+            class="password-toggle-btn"
+            (click)="togglePasswordVisibility()"
+            [attr.aria-label]="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+          >
+            <ion-icon slot="icon-only" [name]="showPassword ? 'eye-off-outline' : 'eye-outline'" color="medium"></ion-icon>
+          </ion-button>
         </ion-item>
       </ion-list>
 
@@ -52,7 +66,7 @@
       </div>
 
       <div class="login-footer ion-margin-top">
-        <a href="#" class="forgot-password">¿Olvidaste tu contraseña?</a>
+        <a routerLink="/forgot-password" class="forgot-password">¿Olvidaste tu contraseña?</a>
       </div>
     </form>
   </div>

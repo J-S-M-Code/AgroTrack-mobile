@@ -61,7 +61,13 @@
     color: var(--ion-color-primary);
     text-decoration: none;
     font-weight: 500;
+    cursor: pointer;
   }
+}
+
+.password-toggle-btn {
+  margin: 0;
+  align-self: center;
 }
 
 ion-list {
