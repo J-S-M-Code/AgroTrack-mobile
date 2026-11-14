@@ -11,13 +11,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
+  Observable,
   Subject,
   forkJoin,
+  from,
   of,
-  takeUntil,
-  switchMap,
-  catchError,
+  throwError,
 } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  map,
+  switchMap,
+  takeUntil,
+} from 'rxjs/operators';
 import {
   IonHeader,
   IonToolbar,
@@ -65,6 +72,9 @@ import { UserService } from '../../../../core/services/user.service';
 import { ContextService } from '../../../../core/services/context.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { AuthService } from '../../../../core/auth/services/auth.service';
+import { NetworkService } from '../../../../core/services/network.service';
+import { SyncService } from '../../../../core/services/sync.service';
+import { OutboxAttachment } from '../../../../core/models/sync.model';
 import {
   ACCION_TYPE_OPTIONS,
   AccionType,
@@ -115,6 +125,8 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private taskService = inject(TaskService);
+  private networkService = inject(NetworkService);
+  private syncService = inject(SyncService);
   private lotService = inject(LotService);
   private userService = inject(UserService);
   private authService = inject(AuthService);
@@ -732,26 +744,65 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
       .toISOString()
       .slice(0, 19);
 
+    const assignedUser = this.personalDisponible.find(
+      (u) => String(u.id) === String(this.personalIdSeleccionado)
+    );
+    const assignedName = assignedUser
+      ? `${assignedUser.name}${assignedUser.lastName ? ' ' + assignedUser.lastName : ''}`.trim()
+      : '';
+    const lotObj = this.lotesDisponibles.find(
+      (l) => String(l.id) === String(this.loteIdSeleccionado)
+    );
+    const lotName = lotObj?.name || '';
+
     this.isSubmitting = true;
     this.cdr.detectChanges();
 
-    const upload$ =
-      this.fotosAdjuntas.length > 0
-        ? forkJoin(
-            this.fotosAdjuntas.map((foto, idx) =>
-              this.taskService.uploadTaskImage(
-                foto.blob,
-                foto.ext,
-                this.farmId,
-                idx
-              )
+    const toAttachments$ = (): Observable<{
+      uploadedPaths: string[];
+      attachments: OutboxAttachment[];
+    }> =>
+      from(
+        Promise.all(
+          this.fotosAdjuntas.map((foto, idx) =>
+            this.syncService.blobToAttachment(
+              foto.blob,
+              `tarea_${idx + 1}.${foto.ext}`
             )
           )
-        : of([] as string[]);
+        )
+      ).pipe(map((attachments) => ({ uploadedPaths: [], attachments })));
 
-    upload$
+    const prep$: Observable<{
+      uploadedPaths: string[];
+      attachments?: OutboxAttachment[];
+    }> =
+      this.fotosAdjuntas.length === 0
+        ? of({ uploadedPaths: [] })
+        : !this.networkService.isOnlineSnapshot
+          ? toAttachments$()
+          : forkJoin(
+              this.fotosAdjuntas.map((foto, idx) =>
+                this.taskService.uploadTaskImage(
+                  foto.blob,
+                  foto.ext,
+                  this.farmId,
+                  idx
+                )
+              )
+            ).pipe(
+              map((uploadedPaths) => ({ uploadedPaths })),
+              catchError((err) => {
+                if (this.networkService.isNetworkError(err)) {
+                  return toAttachments$();
+                }
+                return throwError(() => err);
+              })
+            );
+
+    prep$
       .pipe(
-        switchMap((uploadedPaths: string[]) => {
+        switchMap(({ uploadedPaths, attachments }) => {
           const dto = {
             title: tituloLimpio,
             accionType: this.accionType,
@@ -762,22 +813,36 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
             relatedFarmId: this.farmId,
             relatedLotId: this.loteIdSeleccionado || null,
             assignedId: this.personalIdSeleccionado,
+            creatorName: this.creadorNombre,
+            assignedName,
+            lotName,
+            farmName: this.farmName,
             description: descLimpia,
             images: uploadedPaths,
             polygonLimit: finalPolygon,
             centroid: finalCentroid,
           };
-          return this.taskService.createTask(dto);
+          return this.taskService.createTask(dto, attachments);
+        }),
+        finalize(() => {
+          this.isSubmitting = false;
+          this.cdr.detectChanges();
         }),
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: async (creada) => {
+        next: (creada) => {
           this.isSubmitting = false;
           this.limpiarFotos();
-          await this.mostrarToast(
-            'Tarea operativa creada y notificada.',
-            'success'
+          this.cdr.detectChanges();
+          const savedOffline =
+            !this.networkService.isOnlineSnapshot ||
+            String(creada?.id || '').startsWith('offline_');
+          void this.mostrarToast(
+            savedOffline
+              ? 'Tarea guardada sin conexión. Se enviará al recuperar internet.'
+              : 'Tarea operativa creada y notificada.',
+            savedOffline ? 'warning' : 'success'
           );
           this.router.navigate(['/tareas', creada.id], { replaceUrl: true });
         },
@@ -787,7 +852,11 @@ export class TareaFormPage implements OnInit, OnDestroy, ViewDidEnter {
           this.formError =
             err?.error?.error ||
             err?.error?.message ||
-            'Ocurrió un error al guardar la tarea. Verifica los datos ingresados.';
+            (err?.status === 401 || err?.status === 403
+              ? 'No tienes permisos o tu sesión expiró para crear tareas.'
+              : err?.status == null && err?.message
+                ? `No se pudo guardar la tarea (${err.message}).`
+                : 'Ocurrió un error al guardar la tarea. Verifica los datos ingresados.');
           this.cdr.detectChanges();
         },
       });

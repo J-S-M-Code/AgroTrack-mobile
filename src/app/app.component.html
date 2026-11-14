@@ -9,11 +9,11 @@
         </div>
       </ion-toolbar>
     </ion-header>
-    
+
     <ion-content>
       <ion-list lines="none">
         <ion-menu-toggle auto-hide="false">
-          
+
           <!-- Siempre visible (Estado Reducido) -->
           <ion-item button routerLink="/home" routerDirection="root" (click)="goToFincas()">
             <ion-icon slot="start" name="home-outline"></ion-icon>
@@ -74,9 +74,17 @@
 
         </ion-menu-toggle>
       </ion-list>
-      
+
       <ion-list lines="none" class="ion-margin-top">
         <ion-menu-toggle auto-hide="false">
+          <ion-item button (click)="abrirModalSync()">
+            <ion-icon slot="start" [name]="(networkService.isOnline$ | async) ? 'cloud-done-outline' : 'cloud-offline-outline'"></ion-icon>
+            <ion-label>Sincronización</ion-label>
+            <ion-badge slot="end" [color]="(networkService.isOnline$ | async) ? 'warning' : 'danger'" *ngIf="(syncService.pendingCount$ | async) as pending">
+              {{ pending }}
+            </ion-badge>
+          </ion-item>
+
           <!-- Opciones Inferiores -->
           <ion-item button routerLink="/configuracion" routerDirection="root">
             <ion-icon slot="start" name="settings-outline"></ion-icon>
@@ -98,6 +106,98 @@
       </ion-list>
     </ion-content>
   </ion-menu>
+
+  <!-- Indicador Global de Modo Offline / Sincronización -->
+  @if ((authService.authStatus$ | async) && (!(networkService.isOnline$ | async) || (syncService.isSyncing$ | async))) {
+    <div class="net-pill" [class.syncing]="syncService.isSyncing$ | async" (click)="abrirModalSync()">
+      @if (syncService.isSyncing$ | async) {
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Sincronizando cambios...</span>
+      } @else {
+        <ion-icon name="cloud-offline-outline"></ion-icon>
+        <span>Sin conexión</span>
+        @if ((syncService.pendingCount$ | async); as pending) {
+          <span>· {{ pending }} pendiente(s)</span>
+        }
+      }
+    </div>
+  }
+
+  <!-- Modal de Cola de Sincronización -->
+  <ion-modal #syncModal [isOpen]="syncModalAbierto" (didDismiss)="cerrarModalSync()">
+    <ng-template>
+      <ion-header>
+        <ion-toolbar color="primary">
+          <ion-title>Estado de Sincronización</ion-title>
+          <ion-buttons slot="end">
+            <ion-button (click)="cerrarModalSync()">Cerrar</ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding">
+        <div class="sync-status-card" [class.offline]="!(networkService.isOnline$ | async)">
+          <ion-icon [name]="(networkService.isOnline$ | async) ? 'cloud-done-outline' : 'cloud-offline-outline'"></ion-icon>
+          <div>
+            <strong>{{ (networkService.isOnline$ | async) ? 'Conectado' : 'Sin conexión a internet' }}</strong>
+            @if (syncService.lastSyncAt$ | async; as lastSync) {
+              <p>Última sincronización: {{ lastSync | date:'dd/MM HH:mm' }}</p>
+            } @else {
+              <p>Aún sin sincronizaciones recientes en cola</p>
+            }
+          </div>
+          <ion-button
+            size="small"
+            color="primary"
+            [disabled]="!(networkService.isOnline$ | async) || (syncService.isSyncing$ | async) || !(syncService.pendingCount$ | async)"
+            (click)="sincronizarAhora()"
+          >
+            <ion-icon name="sync-outline" slot="start"></ion-icon>
+            Sincronizar
+          </ion-button>
+        </div>
+
+        @if ((syncService.operations$ | async); as ops) {
+          @if (ops.length === 0) {
+            <div class="sync-empty">
+              <ion-icon name="checkmark-circle-outline" color="success"></ion-icon>
+              <h3>Todo al día</h3>
+              <p>No hay operaciones pendientes por enviar al servidor.</p>
+            </div>
+          } @else {
+            <div class="sync-list">
+              @for (op of ops; track op.id) {
+                <div class="sync-item" [class.failed]="op.status === 'FAILED'">
+                  <div class="sync-item-top">
+                    <strong>{{ op.description }}</strong>
+                    <ion-badge [color]="op.status === 'FAILED' ? 'danger' : op.status === 'SYNCING' ? 'primary' : 'warning'">
+                      {{ op.status === 'FAILED' ? 'Error' : op.status === 'SYNCING' ? 'Enviando' : 'Pendiente' }}
+                    </ion-badge>
+                  </div>
+                  <small>{{ op.createdAt | date:'dd/MM/yyyy HH:mm' }}</small>
+                  @if (op.lastError) {
+                    <p class="sync-err">{{ op.lastError }}</p>
+                  }
+                  <div class="sync-actions">
+                    @if (op.status === 'FAILED') {
+                      <ion-button size="small" fill="outline" color="primary" [disabled]="!(networkService.isOnline$ | async)" (click)="reintentarOperacion(op.id)">
+                        <ion-icon name="refresh-outline" slot="start"></ion-icon>
+                        Reintentar
+                      </ion-button>
+                    }
+                    <ion-button size="small" fill="outline" color="danger" (click)="descartarOperacion(op.id)">
+                      <ion-icon name="trash-outline" slot="start"></ion-icon>
+                      Descartar
+                    </ion-button>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+        }
+      </ion-content>
+    </ng-template>
+  </ion-modal>
 
   <!-- Contenedor principal de vistas -->
   <ion-router-outlet id="main-content"></ion-router-outlet>

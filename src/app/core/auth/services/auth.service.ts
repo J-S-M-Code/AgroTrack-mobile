@@ -1,9 +1,10 @@
-import { Injectable } from '@angular/core';
+import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, firstValueFrom, switchMap } from 'rxjs';
+import { BehaviorSubject, Observable, firstValueFrom, switchMap, timeout } from 'rxjs';
 import { Router } from '@angular/router';
 import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../../../environments/environment';
+import { NetworkService } from '../../services/network.service';
 
 const TOKEN_KEY = 'agrotrack_token';
 const USER_ID_KEY = 'userId';
@@ -14,6 +15,7 @@ const REFRESH_THRESHOLD_SECONDS = 24 * 60 * 60; // 24 horas
 })
 export class AuthService {
   private apiUrl = environment.apiUrl + '/auth';
+  private networkService = inject(NetworkService);
 
   private authStatusSubj = new BehaviorSubject<boolean>(false);
   public authStatus$ = this.authStatusSubj.asObservable();
@@ -82,6 +84,10 @@ export class AuthService {
     const token = await this.getToken();
     if (!token) return null;
 
+    if (!this.networkService.isOnlineSnapshot) {
+      return token;
+    }
+
     const payload = this.decodePayload(token);
     if (!payload || !payload.exp) {
       return token;
@@ -103,6 +109,9 @@ export class AuthService {
   }
 
   private async executeSilentRefresh(currentToken: string): Promise<string | null> {
+    if (!this.networkService.isOnlineSnapshot) {
+      return currentToken;
+    }
     if (this.refreshInFlight) {
       return this.refreshInFlight;
     }
@@ -110,7 +119,9 @@ export class AuthService {
     this.refreshInFlight = (async () => {
       try {
         const res = await firstValueFrom(
-          this.http.post<{ token: string }>(`${this.apiUrl}/refresh`, {})
+          this.http
+            .post<{ token: string }>(`${this.apiUrl}/refresh`, {})
+            .pipe(timeout(3000))
         );
         if (res && res.token) {
           await this.setToken(res.token);

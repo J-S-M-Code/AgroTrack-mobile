@@ -11,13 +11,20 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import {
+  Observable,
   Subject,
   forkJoin,
+  from,
   of,
-  takeUntil,
-  catchError,
-  switchMap,
+  throwError,
 } from 'rxjs';
+import {
+  catchError,
+  finalize,
+  map,
+  switchMap,
+  takeUntil,
+} from 'rxjs/operators';
 import {
   IonHeader,
   IonToolbar,
@@ -81,6 +88,9 @@ import { ContextService } from '../../../../core/services/context.service';
 import { LotService } from '../../../../core/services/lot.service';
 import { PermissionService } from '../../../../core/services/permission.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { NetworkService } from '../../../../core/services/network.service';
+import { SyncService } from '../../../../core/services/sync.service';
+import { OutboxAttachment } from '../../../../core/models/sync.model';
 import { Tarea } from '../../../../core/models/tarea.model';
 import { Lot } from '../../../../core/models/lot.model';
 
@@ -127,6 +137,8 @@ export class TareaDetallePage
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private taskService = inject(TaskService);
+  private networkService = inject(NetworkService);
+  private syncService = inject(SyncService);
   private contextService = inject(ContextService);
   private lotService = inject(LotService);
   private permissionService = inject(PermissionService);
@@ -341,25 +353,36 @@ export class TareaDetallePage
 
   marcarEnProgreso() {
     if (!this.tarea || this.isUpdatingStatus) return;
+    const targetFarmId = this.tarea.fincaId || this.farmId;
     this.isUpdatingStatus = true;
     this.cdr.detectChanges();
 
     this.taskService
-      .updateTaskStatus(this.tarea.id, 'IN_PROGESS')
-      .pipe(takeUntil(this.destroy$))
-      .subscribe({
-        next: async () => {
+      .updateTaskStatus(this.tarea.id, 'IN_PROGESS', undefined, targetFarmId)
+      .pipe(
+        finalize(() => {
           this.isUpdatingStatus = false;
-          await this.mostrarToast(
-            'Tarea marcada En Progreso.',
-            'primary'
+          this.cdr.detectChanges();
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: () => {
+          this.isUpdatingStatus = false;
+          this.cdr.detectChanges();
+          const savedOffline = !this.networkService.isOnlineSnapshot;
+          void this.mostrarToast(
+            savedOffline
+              ? 'Estado guardado sin conexión. Se enviará al recuperar internet.'
+              : 'Tarea marcada En Progreso.',
+            savedOffline ? 'warning' : 'primary'
           );
           this.cargarDetalle();
         },
-        error: async () => {
+        error: () => {
           this.isUpdatingStatus = false;
           this.cdr.detectChanges();
-          await this.mostrarToast(
+          void this.mostrarToast(
             'No se pudo actualizar el estado de la tarea.',
             'danger'
           );
@@ -490,39 +513,82 @@ export class TareaDetallePage
     this.completeError = '';
     this.cdr.detectChanges();
 
-    const upload$ =
-      this.fotosCierreAdjuntas.length > 0 && targetFarmId
-        ? forkJoin(
-            this.fotosCierreAdjuntas.map((foto, idx) =>
-              this.taskService.uploadTaskImage(
-                foto.blob,
-                foto.ext,
-                targetFarmId,
-                idx
-              )
+    const toAttachments$ = (): Observable<{
+      uploadedPaths: string[];
+      attachments: OutboxAttachment[];
+    }> =>
+      from(
+        Promise.all(
+          this.fotosCierreAdjuntas.map((foto, idx) =>
+            this.syncService.blobToAttachment(
+              foto.blob,
+              `cierre_${idx + 1}.${foto.ext}`
             )
           )
-        : of([] as string[]);
+        )
+      ).pipe(map((attachments) => ({ uploadedPaths: [], attachments })));
 
-    upload$
+    const prep$: Observable<{
+      uploadedPaths: string[];
+      attachments?: OutboxAttachment[];
+    }> =
+      this.fotosCierreAdjuntas.length === 0
+        ? of({ uploadedPaths: [] })
+        : !this.networkService.isOnlineSnapshot || !targetFarmId
+          ? toAttachments$()
+          : forkJoin(
+              this.fotosCierreAdjuntas.map((foto, idx) =>
+                this.taskService.uploadTaskImage(
+                  foto.blob,
+                  foto.ext,
+                  targetFarmId,
+                  idx
+                )
+              )
+            ).pipe(
+              map((uploadedPaths) => ({ uploadedPaths })),
+              catchError((err) => {
+                if (this.networkService.isNetworkError(err)) {
+                  return toAttachments$();
+                }
+                return throwError(() => err);
+              })
+            );
+
+    prep$
       .pipe(
-        switchMap((uploadedPaths) =>
-          this.taskService.updateTaskStatus(this.tarea!.id, 'FINISH', {
-            completionNotes: this.observacionCierreInput.trim() || undefined,
-            completionImages:
-              uploadedPaths.length > 0 ? uploadedPaths : undefined,
-          })
+        switchMap(({ uploadedPaths, attachments }) =>
+          this.taskService.updateTaskStatus(
+            this.tarea!.id,
+            'FINISH',
+            {
+              completionNotes:
+                this.observacionCierreInput.trim() || undefined,
+              completionImages:
+                uploadedPaths.length > 0 ? uploadedPaths : undefined,
+            },
+            targetFarmId,
+            attachments
+          )
         ),
+        finalize(() => {
+          this.isUpdatingStatus = false;
+          this.cdr.detectChanges();
+        }),
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: async () => {
+        next: () => {
           this.isUpdatingStatus = false;
           this.isCompleteModalOpen = false;
           this.limpiarFotosCierre();
-          await this.mostrarToast(
-            '¡Tarea finalizada con éxito!',
-            'success'
+          this.cdr.detectChanges();
+          const savedOffline = !this.networkService.isOnlineSnapshot;
+          void this.mostrarToast(
+            savedOffline
+              ? 'Cierre guardado sin conexión. Se enviará al recuperar internet.'
+              : '¡Tarea finalizada con éxito!',
+            savedOffline ? 'warning' : 'success'
           );
           this.cargarDetalle();
         },
