@@ -1,0 +1,227 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tareas" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Asignar Nueva Tarea</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <div class="form-body">
+    <div class="form-intro">
+      <p>
+        Asigna una labor operativa en <strong>{{ farmName || 'la finca activa' }}</strong>.
+        Creador: <strong>{{ creadorNombre }}</strong>.
+      </p>
+    </div>
+
+    <div class="error-banner" *ngIf="formError">
+      <ion-icon name="warning-outline"></ion-icon>
+      <span>{{ formError }}</span>
+    </div>
+
+    <!-- 1. Datos de la Labor -->
+    <ion-card class="form-card">
+      <ion-card-content class="card-pad">
+        <h3 class="section-heading">
+          <ion-icon name="clipboard-outline"></ion-icon>
+          1. Datos de la Labor
+        </h3>
+
+        <ion-list lines="full" class="clean-list">
+          <ion-item>
+            <ion-input
+              label="Título de la Tarea *"
+              labelPlacement="stacked"
+              placeholder="Ej: Aplicación foliar en sector norte"
+              [(ngModel)]="titulo">
+            </ion-input>
+          </ion-item>
+
+          <ion-item>
+            <ion-select
+              label="Tipo de Acción *"
+              labelPlacement="stacked"
+              [(ngModel)]="accionType"
+              interface="popover">
+              <ion-select-option *ngFor="let a of accionesOpciones" [value]="a.value">
+                {{ a.label }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-select
+              label="Prioridad *"
+              labelPlacement="stacked"
+              [(ngModel)]="priority"
+              interface="popover">
+              <ion-select-option *ngFor="let p of prioridadesOpciones" [value]="p.value">
+                {{ p.label }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-label position="stacked">Fecha Límite *</ion-label>
+            <input
+              type="date"
+              class="native-date-input"
+              [(ngModel)]="fechaVencimiento" />
+          </ion-item>
+
+          <ion-item lines="none">
+            <ion-textarea
+              label="Instrucciones o detalles (Opcional)"
+              labelPlacement="stacked"
+              rows="3"
+              placeholder="Detalla insumos, dosis, herramientas o recomendaciones (opcional)..."
+              [(ngModel)]="descripcion">
+            </ion-textarea>
+          </ion-item>
+        </ion-list>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 2. Asignación de Personal y Lote -->
+    <ion-card class="form-card">
+      <ion-card-content class="card-pad">
+        <h3 class="section-heading">
+          <ion-icon name="person-outline"></ion-icon>
+          2. Responsable y Ubicación
+        </h3>
+
+        <ion-list lines="full" class="clean-list">
+          <ion-item>
+            <ion-select
+              label="Personal Responsable *"
+              labelPlacement="stacked"
+              [(ngModel)]="personalIdSeleccionado"
+              placeholder="Seleccionar integrante..."
+              interface="popover">
+              <ion-select-option *ngFor="let u of personalDisponible" [value]="u.id">
+                {{ u.name }} {{ u.lastName || '' }} ({{ getRolLabel(u.role) }})
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item lines="none">
+            <ion-select
+              label="Lote Asignado (Opcional)"
+              labelPlacement="stacked"
+              [(ngModel)]="loteIdSeleccionado"
+              (ionChange)="onLoteChange()"
+              interface="popover">
+              <ion-select-option value="">Toda la finca (Sin lote específico)</ion-select-option>
+              <ion-select-option *ngFor="let l of lotesDisponibles" [value]="l.id">
+                {{ l.name }} ({{ l.area | number:'1.1-2' }} ha)
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+        </ion-list>
+
+        <!-- Herramientas Geoespaciales (GPS + Dibujo de Área) -->
+        <div class="geo-tools-block">
+          <div class="geo-buttons-row">
+            <ion-button
+              size="small"
+              fill="solid"
+              color="primary"
+              [disabled]="isGettingGps"
+              (click)="usarUbicacionGps()">
+              <ion-spinner *ngIf="isGettingGps" name="crescent" style="width: 14px; height: 14px; margin-right: 6px;"></ion-spinner>
+              <ion-icon *ngIf="!isGettingGps" slot="start" name="navigate-outline"></ion-icon>
+              Usar mi ubicación GPS
+            </ion-button>
+
+            <ion-button
+              size="small"
+              fill="outline"
+              color="secondary"
+              (click)="activarDibujoArea()">
+              <ion-icon slot="start" name="create-outline"></ion-icon>
+              {{ isDrawingArea ? 'Toca el mapa para trazar...' : 'Dibujar Área de Trabajo' }}
+            </ion-button>
+          </div>
+
+          <div class="gps-status-chip" *ngIf="gpsLatLng">
+            <div class="chip-left">
+              <ion-icon name="checkmark-circle-outline"></ion-icon>
+              <span>{{ gpsMensaje }}</span>
+            </div>
+            <button type="button" class="chip-clear" (click)="limpiarPinGps()">Quitar GPS</button>
+          </div>
+
+          <div class="gps-status-chip subzone" *ngIf="poligonoDibujadoCoords">
+            <div class="chip-left">
+              <ion-icon name="location-outline"></ion-icon>
+              <span>Área específica delimitada ({{ poligonoDibujadoCoords.length - 1 }} vértices)</span>
+            </div>
+            <button type="button" class="chip-clear" (click)="limpiarAreaTrabajo()">Borrar área</button>
+          </div>
+
+          <div class="preview-map-container">
+            <div id="mapa-tarea-form" class="preview-map"></div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 3. Imágenes de Referencia (@capacitor/camera) -->
+    <ion-card class="form-card">
+      <ion-card-content class="card-pad">
+        <h3 class="section-heading">
+          <ion-icon name="camera-outline"></ion-icon>
+          3. Fotos de Referencia (Opcional)
+        </h3>
+
+        <p class="photo-helper">
+          Puedes adjuntar imágenes del sector o referencia visual para orientar al responsable.
+        </p>
+
+        <div class="camera-buttons-row">
+          <ion-button fill="outline" color="primary" size="small" (click)="capturarFoto('CAMARA')">
+            <ion-icon slot="start" name="camera-outline"></ion-icon>
+            Tomar Foto
+          </ion-button>
+
+          <ion-button fill="outline" color="secondary" size="small" (click)="capturarFoto('GALERIA')">
+            <ion-icon slot="start" name="images-outline"></ion-icon>
+            Galería
+          </ion-button>
+        </div>
+
+        <input
+          #fileInputFallback
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+          hidden
+          (change)="onArchivosFallbackSeleccionados($event)" />
+
+        <div class="previews-grid" *ngIf="fotosAdjuntas.length > 0">
+          <div class="preview-item" *ngFor="let foto of fotosAdjuntas; let i = index">
+            <img [src]="foto.previewUrl" alt="Vista previa" />
+            <span class="size-tag">{{ (foto.sizeBytes / 1024 / 1024) | number:'1.1-1' }} MB</span>
+            <button type="button" class="remove-photo-btn" (click)="quitarFoto(i)">
+              <ion-icon name="close-circle"></ion-icon>
+            </button>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- Botones de Acción -->
+    <div class="form-actions">
+      <ion-button
+        expand="block"
+        color="primary"
+        [disabled]="isSubmitting"
+        (click)="guardarTarea()">
+        <ion-spinner *ngIf="isSubmitting" name="crescent" style="margin-right: 8px;"></ion-spinner>
+        {{ isSubmitting ? 'Guardando y notificando...' : 'Guardar y Asignar Tarea' }}
+      </ion-button>
+    </div>
+  </div>
+</ion-content>

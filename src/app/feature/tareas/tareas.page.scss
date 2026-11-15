@@ -1,0 +1,45 @@
+:host { display: flex; flex-direction: column; height: 100%; }
+.filter-header-btn { position: relative; }
+.filter-badge { position: absolute; top: 4px; right: 2px; font-size: 0.65rem; border-radius: 99px; }
+.controls-toolbar { --background: #fff; --padding-start: 12px; --padding-end: 12px; border-bottom: 1px solid #e2e8f0; }
+.controls-wrapper, .tasks-list, .modal-actions-footer { display: flex; flex-direction: column; gap: 8px; }
+.tasks-searchbar { --background: var(--ion-color-light); --border-radius: 10px; --box-shadow: none; padding: 0; }
+.tasks-segment { --background: var(--ion-color-light); border-radius: 10px; padding: 2px; }
+.tasks-segment ion-segment-button { --indicator-color: #fff; --color: #64748b; --color-checked: #0d8a5c; min-height: 34px; font-size: 0.76rem; font-weight: 600; text-transform: none; }
+.page-body { padding: 14px 14px 88px; }
+.tasks-list { gap: 12px; }
+.farm-context-banner, .card-top-row, .card-footer-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.farm-context-banner { align-items: center; margin-bottom: 12px; font-size: 0.84rem; color: #475569; }
+.farm-context-info, .active-filters-row, .badges-wrap { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.results-count { font-size: 0.78rem; font-weight: 600; color: #64748b; background: #e2e8f0; padding: 2px 8px; border-radius: 99px; }
+.active-filters-row { margin-bottom: 12px; }
+.clear-inline-btn { border: 0; background: 0; color: var(--ion-color-danger); font-size: 0.8rem; font-weight: 600; }
+.task-card { margin: 0; border-radius: 14px; background: #fff; box-shadow: 0 3px 12px rgba(15,23,42,.06); border: 1px solid #eef2f6; border-left: 4px solid #f59e0b; }
+.task-card[data-status="IN_PROGESS"] { border-left-color: #2563eb; }
+.task-card[data-status="FINISH"] { border-left-color: #0d8a5c; }
+.task-card-content { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.type-pill-group { display: flex; align-items: flex-start; gap: 10px; flex: 1; min-width: 0; }
+.type-icon-box { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; background: #fef3c7; color: #d97706; }
+.type-icon-box[data-status="IN_PROGESS"] { background: #dbeafe; color: #1d4ed8; }
+.type-icon-box[data-status="FINISH"] { background: #e6f4ea; color: #0d8a5c; }
+.task-title { margin: 0; font-size: 1rem; font-weight: 700; color: #1e293b; line-height: 1.25; }
+.author-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; margin-top: 3px; font-size: 0.75rem; color: #64748b; }
+.overdue-text { color: #dc2626; font-weight: 700; }
+.badges-col { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.prio-badge, .status-badge { padding: 2px 8px; border-radius: 99px; font-size: 0.7rem; font-weight: 700; }
+.prio-badge[data-prio="Alta"] { background: #fee2e2; color: #b91c1c; }
+.prio-badge[data-prio="Media"] { background: #fef3c7; color: #b45309; }
+.prio-badge[data-prio="Baja"] { background: #e0f2fe; color: #0369a1; }
+.status-badge { background: #f1f5f9; color: #475569; }
+.status-badge[data-status="IN_PROGESS"] { background: #dbeafe; color: #1d4ed8; }
+.status-badge[data-status="FINISH"] { background: #dcfce7; color: #15803d; }
+.task-desc { margin: 0; font-size: 0.85rem; color: #475569; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.card-footer-row { align-items: center; padding-top: 8px; border-top: 1px solid #f1f5f9; }
+.entity-chip, .sensor-chip { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; font-size: 0.73rem; font-weight: 600; }
+.entity-chip { background: #f8fafc; color: #334155; border: 1px solid #e2e8f0; }
+.sensor-chip.photo { background: #eff6ff; color: #1d4ed8; }
+.sensor-chip.gps { background: #ecfdf5; color: #047857; }
+.card-chevron { color: #94a3b8; flex-shrink: 0; }
+.state-box { padding: 36px 16px; text-align: center; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.empty-icon-circle { width: 56px; height: 56px; border-radius: 50%; background: #e6f4ea; color: #0d8a5c; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; }
+.filter-modal-list { border-radius: 12px; overflow: hidden; margin-bottom: 14px; }

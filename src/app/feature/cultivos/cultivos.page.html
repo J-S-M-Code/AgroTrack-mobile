@@ -1,0 +1,299 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+
+    <ion-title>Gestión de Cultivos</ion-title>
+
+    <ion-buttons slot="end" *ngIf="fincaActiva">
+      <ion-button class="filter-header-btn" (click)="abrirModalFiltros()" aria-label="Filtros avanzados">
+        <ion-icon slot="icon-only" name="options-outline"></ion-icon>
+        <ion-badge color="warning" class="filter-badge" *ngIf="cantidadFiltrosActivos > 0">
+          {{ cantidadFiltrosActivos }}
+        </ion-badge>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <!-- Barra fija de Búsqueda + Segmentos -->
+  <ion-toolbar class="controls-toolbar" *ngIf="fincaActiva">
+    <div class="controls-wrapper">
+      <ion-searchbar
+        class="crops-searchbar"
+        placeholder="Buscar especie, variedad o lote..."
+        [value]="searchTerm"
+        [debounce]="150"
+        (ionInput)="onSearchInput($event)"
+        (ionClear)="onSearchClear()">
+      </ion-searchbar>
+
+      <ion-segment [value]="segmentoActual" (ionChange)="onSegmentChange($event)" class="crops-segment">
+        <ion-segment-button value="Todos">
+          <ion-label>Todos ({{ cultivosCombinados.length }})</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="Activos">
+          <ion-label>Activos ({{ cultivosActivos.length }})</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="Sin Lote">
+          <ion-label>Sin Lote ({{ cultivosSinLote.length }})</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)" [disabled]="!fincaActiva">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingSpinner="crescent">
+    </ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-body">
+    <!-- Estado sin finca seleccionada -->
+    <div class="state-box" *ngIf="!fincaActiva && !isLoading">
+      <div class="state-icon-circle">
+        <ion-icon name="leaf-outline"></ion-icon>
+      </div>
+      <h3>Selecciona una finca primero</h3>
+      <p>Debes ingresar a una finca desde el inicio para consultar y gestionar sus cultivos.</p>
+      <ion-button color="primary" (click)="irAMisFincas()">Ir a Mis Fincas</ion-button>
+    </div>
+
+    <ng-container *ngIf="fincaActiva">
+      <!-- Subtítulo de contexto de finca -->
+      <div class="farm-context-banner">
+        <div class="farm-context-info">
+          <ion-icon name="leaf-outline"></ion-icon>
+          <span>Monitoreo SENASA · <strong>{{ fincaActiva.name }}</strong></span>
+        </div>
+        <span class="results-count" *ngIf="!isLoading">
+          {{ filteredCultivos.length }} {{ filteredCultivos.length === 1 ? 'cultivo' : 'cultivos' }}
+        </span>
+      </div>
+
+      <!-- Chips de filtros avanzados activos -->
+      <div class="active-filters-row" *ngIf="cantidadFiltrosActivos > 0">
+        <ion-chip color="primary" outline="true" *ngIf="selectedLote && segmentoActual !== 'Sin Lote'" (click)="quitarFiltroLote()">
+          <ion-icon name="location-outline"></ion-icon>
+          <ion-label>Lote: {{ selectedLote }}</ion-label>
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+
+        <ion-chip color="primary" outline="true" *ngIf="selectedEstado" (click)="quitarFiltroEstado()">
+          <ion-label>Estado: {{ selectedEstado }}</ion-label>
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+
+        <button type="button" class="clear-inline-btn" (click)="limpiarFiltrosAvanzados()">
+          Limpiar
+        </button>
+      </div>
+
+      <!-- Cargando -->
+      <div class="state-box" *ngIf="isLoading">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <p>Cargando cultivos de la finca...</p>
+      </div>
+
+      <!-- Error -->
+      <div class="state-box error-state" *ngIf="!isLoading && errorMessage">
+        <div class="state-icon-circle danger">
+          <ion-icon name="warning-outline"></ion-icon>
+        </div>
+        <h3>Error de conexión</h3>
+        <p>{{ errorMessage }}</p>
+        <ion-button fill="outline" color="primary" (click)="cargarCultivos(true)">
+          <ion-icon slot="start" name="refresh-outline"></ion-icon>
+          Reintentar
+        </ion-button>
+      </div>
+
+      <!-- Lista de tarjetas de cultivos -->
+      <div class="crops-list" *ngIf="!isLoading && !errorMessage && filteredCultivos.length > 0">
+        <ion-card
+          class="crop-card"
+          button="true"
+          *ngFor="let c of filteredCultivos"
+          (click)="verDetalle(c)">
+          <ion-card-content class="crop-card-content">
+            <!-- Fila Superior: Especie + Variedad + Chevron -->
+            <div class="card-top-row">
+              <div class="species-group">
+                <h3 class="species-title">{{ c.especie }}</h3>
+                <span class="variety-badge">{{ c.variedad }}</span>
+                <span class="perennial-badge" *ngIf="c.isPerennial" title="Cultivo perenne">
+                  <ion-icon name="sync-outline"></ion-icon> Perenne
+                </span>
+              </div>
+              <ion-icon name="chevron-forward-outline" class="card-chevron"></ion-icon>
+            </div>
+
+            <!-- Fila de Ubicación y Superficie -->
+            <div class="meta-row">
+              <span class="lot-chip" [class.unassigned]="!c.lote">
+                <ion-icon name="location-outline"></ion-icon>
+                {{ c.lote || 'Sin lote asignado' }}
+              </span>
+              <span class="surface-text">{{ c.hectareas | number:'1.0-2' }} ha</span>
+            </div>
+
+            <!-- Estado Fenológico -->
+            <div class="phenological-row">
+              <span class="state-label">Estado fenológico:</span>
+              <span class="state-pill" [ngClass]="getEstadoClass(c.phenologicalState)">
+                {{ c.estado }}
+              </span>
+            </div>
+
+            <!-- Barra de Progreso del Ciclo -->
+            <div class="cycle-progress-box">
+              <div class="dates-row">
+                <span>
+                  <ion-icon name="calendar-outline"></ion-icon>
+                  Plantación: <strong>{{ c.fechaPlantacion | date:'dd/MM/yy' }}</strong>
+                </span>
+                <span>
+                  Cosecha: <strong>{{ c.fechaCosecha | date:'dd/MM/yy' }}</strong>
+                </span>
+              </div>
+              <div class="progress-wrapper">
+                <ion-progress-bar
+                  [value]="calcularProgreso(c.fechaPlantacion, c.fechaCosecha) / 100"
+                  color="primary">
+                </ion-progress-bar>
+                <span class="progress-pct">{{ calcularProgreso(c.fechaPlantacion, c.fechaCosecha) }}%</span>
+              </div>
+            </div>
+
+            <!-- Estado Sanitario / Alertas -->
+            <div class="alerts-container">
+              <ng-container *ngIf="getAlertas(c).length > 0; else optimalStatus">
+                <div class="alert-banner warning" *ngFor="let alerta of getAlertas(c)">
+                  <ion-icon name="warning-outline"></ion-icon>
+                  <span>{{ alerta.descripcion }}</span>
+                </div>
+              </ng-container>
+              <ng-template #optimalStatus>
+                <div class="alert-banner optimal">
+                  <ion-icon name="checkmark-circle"></ion-icon>
+                  <span>Cultivo en óptimas condiciones</span>
+                </div>
+              </ng-template>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      </div>
+
+      <!-- Estado Vacío -->
+      <div class="state-box" *ngIf="!isLoading && !errorMessage && filteredCultivos.length === 0">
+        <div class="state-icon-circle">
+          <ion-icon name="leaf-outline"></ion-icon>
+        </div>
+        <h3>No se encontraron cultivos</h3>
+        <p *ngIf="searchTerm || cantidadFiltrosActivos > 0 || segmentoActual !== 'Todos'">
+          No hay plantaciones que coincidan con la búsqueda o los filtros seleccionados.
+        </p>
+        <p *ngIf="!searchTerm && cantidadFiltrosActivos === 0 && segmentoActual === 'Todos'">
+          Aún no hay cultivos registrados para esta finca.
+        </p>
+
+        <ion-button
+          *ngIf="searchTerm || cantidadFiltrosActivos > 0 || segmentoActual !== 'Todos'"
+          fill="outline"
+          color="primary"
+          size="small"
+          (click)="limpiarTodo()">
+          Restablecer filtros
+        </ion-button>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- FAB: Registrar Nuevo Cultivo (OWNER, FOREMAN, AGRONOMIST) -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed" *ngIf="fincaActiva && canManageCrops">
+    <ion-fab-button color="primary" (click)="registrarCultivo()" aria-label="Registrar nuevo cultivo">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Bottom Sheet: Filtros Avanzados (Lote y Estado Fenológico) -->
+  <ion-modal
+    [isOpen]="isFiltrosOpen"
+    (didDismiss)="cerrarModalFiltros()"
+    [initialBreakpoint]="0.58"
+    [breakpoints]="[0, 0.58, 0.85]">
+    <ng-template>
+      <ion-header class="ion-no-border">
+        <ion-toolbar>
+          <ion-title class="modal-title">Filtrar Cultivos</ion-title>
+          <ion-buttons slot="end">
+            <ion-button class="close-icon-btn" fill="clear" shape="round" (click)="cerrarModalFiltros()" aria-label="Cerrar">
+              <ion-icon slot="icon-only" name="close"></ion-icon>
+            </ion-button>
+          </ion-buttons>
+        </ion-toolbar>
+      </ion-header>
+
+      <ion-content class="ion-padding">
+        <p class="modal-helper-text">
+          Refina el listado combinando lote asignado y etapa fenológica actual.
+        </p>
+
+        <ion-list lines="full" class="filter-modal-list">
+          <!-- Filtro por Lote -->
+          <ion-item>
+            <ion-select
+              label="Lote / Cuartel"
+              labelPlacement="stacked"
+              interface="popover"
+              placeholder="Todos los Lotes"
+              [(ngModel)]="selectedLote"
+              [disabled]="segmentoActual === 'Sin Lote'"
+              (ionChange)="aplicarFiltros()">
+              <ion-select-option value="">Todos los Lotes</ion-select-option>
+              <ion-select-option *ngFor="let lote of lotesDisponibles" [value]="lote">
+                {{ lote }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <p class="disabled-lot-hint" *ngIf="segmentoActual === 'Sin Lote'">
+            El filtro por lote no aplica en la pestaña "Sin Lote".
+          </p>
+
+          <!-- Filtro por Estado Fenológico -->
+          <ion-item>
+            <ion-select
+              label="Estado Fenológico"
+              labelPlacement="stacked"
+              interface="popover"
+              placeholder="Todos los Estados"
+              [(ngModel)]="selectedEstado"
+              (ionChange)="aplicarFiltros()">
+              <ion-select-option value="">Todos los Estados</ion-select-option>
+              <ion-select-option *ngFor="let est of estadosDisponibles" [value]="est.label">
+                {{ est.label }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+        </ion-list>
+
+        <div class="modal-actions-footer">
+          <ion-button
+            expand="block"
+            fill="outline"
+            color="danger"
+            [disabled]="cantidadFiltrosActivos === 0"
+            (click)="limpiarFiltrosAvanzados()">
+            Limpiar Filtros
+          </ion-button>
+
+          <ion-button expand="block" color="primary" (click)="cerrarModalFiltros()">
+            Ver Resultados ({{ filteredCultivos.length }})
+          </ion-button>
+        </div>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

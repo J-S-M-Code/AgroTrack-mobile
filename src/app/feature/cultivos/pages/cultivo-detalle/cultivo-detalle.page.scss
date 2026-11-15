@@ -1,0 +1,69 @@
+:host, .detail-body, .kv-list, .events-list, .modal-footer-btns, .act-list, .time-info, .map-legend, .act-txt {
+  display: flex; flex-direction: column;
+}
+.info-chip, .card-section-title, .time-point, .progress-row, .layer-btn, .act-btn, .act-ico {
+  display: flex; align-items: center;
+}
+:host { height: 100%; }
+.detail-body, .kv-list, .events-list, .modal-footer-btns { gap: 12px; }
+.detail-body { padding: 14px 14px 32px; }
+.section-card { margin: 0; border-radius: 14px; background: #fff; box-shadow: 0 3px 12px rgba(15,23,42,.06); border: 1px solid #eef2f6; }
+.card-pad { padding: 16px; }
+
+.hero-header, .kv-row, .event-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.crop-title { margin: 0; font-size: 1.35rem; font-weight: 700; color: #1e293b; }
+.crop-variety { margin: 3px 0 0; font-size: .88rem; color: #64748b; }
+.badges-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid #f1f5f9; }
+.info-chip { gap: 5px; font-size: .8rem; font-weight: 600; color: #334155; background: #f8fafc; padding: 4px 10px; border-radius: 99px; border: 1px solid #e2e8f0; }
+.unassigned { color: #b45309; background: #fffbeb; }
+.perennial, .ico-green { color: #0d8a5c; background: #e6f4ea; }
+
+.card-section-title { margin: 0 0 14px; font-size: 1rem; font-weight: 700; color: #1e293b; gap: 8px; }
+.card-section-title ion-icon { color: #0d8a5c; }
+
+.kv-row { font-size: .86rem; padding-bottom: 8px; border-bottom: 1px dashed #e2e8f0; color: #64748b; }
+.kv-row:last-child { border: 0; padding: 0; }
+.kv-row strong, .time-info strong { color: #1e293b; }
+
+.timeline-box { padding-left: 4px; margin-bottom: 14px; }
+.time-point { gap: 12px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; background: #0d8a5c; }
+.amber { background: #f59e0b; }
+.time-connector { width: 2px; height: 20px; background: #cbd5e1; margin: 2px 0 2px 5px; }
+.time-info { font-size: .8rem; color: #64748b; }
+
+.progress-row { gap: 10px; font-size: .78rem; font-weight: 700; color: #0d8a5c; }
+.progress-row ion-progress-bar { height: 8px; border-radius: 99px; }
+
+.events-segment { --background: var(--ion-color-light); border-radius: 10px; padding: 2px; margin-bottom: 12px; }
+.events-segment ion-segment-button { min-height: 32px; font-size: .76rem; font-weight: 600; text-transform: none; }
+.event-item { display: flex; gap: 10px; padding: 11px; border-radius: 10px; background: #f8fafc; border-left: 3px solid #cbd5e1; font-size: .84rem; color: #334155; }
+.alerta { background: #fef2f2; border-left-color: #ef4444; }
+.tarea { background: #f0fdf4; border-left-color: #0d8a5c; }
+.comentario { background: #eff6ff; border-left-color: #3b82f6; }
+.event-body { flex: 1; }
+.event-body p { margin: 4px 0 0; }
+.event-meta { font-size: .75rem; color: #64748b; }
+
+.layer-pills { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 10px; }
+.layer-btn { gap: 4px; border: 1px solid #e2e8f0; background: #f8fafc; color: #475569; padding: 6px 12px; border-radius: 99px; font-size: .78rem; font-weight: 600; white-space: nowrap; }
+.layer-btn.active { background: #0d8a5c; color: #fff; border-color: #0d8a5c; }
+
+.map-box { position: relative; height: 280px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+.detail-map { width: 100%; height: 100%; z-index: 1; }
+.map-legend { position: absolute; bottom: 10px; left: 10px; right: 10px; background: rgba(255,255,255,.94); padding: 8px 10px; border-radius: 8px; z-index: 500; font-size: .76rem; color: #475569; pointer-events: none; }
+
+.inline-empty { text-align: center; padding: 18px 12px; font-size: .84rem; color: #64748b; background: #f8fafc; border-radius: 10px; }
+.danger-title { color: #dc2626; }
+.modal-desc { margin: 0 0 12px; font-size: .85rem; color: #475569; }
+
+.act-list { gap: 8px; }
+.act-btn { width: 100%; gap: 12px; padding: 10px 12px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; text-align: left; color: #1e293b; }
+.act-btn.danger { background: #fff5f5; border-color: #fecaca; color: #dc2626; }
+.act-ico { width: 38px; height: 38px; border-radius: 10px; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+.ico-amber { background: #fef3c7; color: #d97706; }
+.ico-blue { background: #e0f2fe; color: #0284c7; }
+.ico-red { background: #fee2e2; color: #dc2626; }
+.act-txt { flex: 1; gap: 2px; font-size: .9rem; }
+.act-txt small { font-size: .75rem; color: #64748b; }
+.act-arr { color: #94a3b8; }

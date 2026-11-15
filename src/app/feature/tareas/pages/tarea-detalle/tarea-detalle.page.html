@@ -1,0 +1,364 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tareas" text=""></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>Detalle de Tarea</ion-title>
+
+    <ion-buttons slot="end" *ngIf="tarea && puedeEliminar">
+      <ion-button color="light" (click)="abrirModalEliminar()" aria-label="Eliminar tarea">
+        <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingSpinner="crescent"></ion-refresher-content>
+  </ion-refresher>
+
+  <!-- Cargando -->
+  <div class="state-box" *ngIf="isLoading">
+    <ion-spinner name="crescent" color="primary"></ion-spinner>
+    <p>Cargando detalle de la labor...</p>
+  </div>
+
+  <!-- Error -->
+  <div class="state-box" *ngIf="!isLoading && errorMessage">
+    <ion-icon name="warning-outline" color="danger" style="font-size: 2.2rem;"></ion-icon>
+    <p>{{ errorMessage }}</p>
+    <ion-button fill="outline" color="primary" size="small" (click)="cargarDetalle()">
+      <ion-icon slot="start" name="refresh-outline"></ion-icon>
+      Reintentar
+    </ion-button>
+  </div>
+
+  <!-- Contenido Principal -->
+  <div class="detail-body" *ngIf="!isLoading && !errorMessage && tarea">
+    <!-- 1. Cabecera y Estado Operativo -->
+    <ion-card class="detail-card" [attr.data-status]="tarea.rawStatus">
+      <ion-card-content class="card-pad">
+        <div class="hero-top">
+          <div class="hero-icon" [attr.data-status]="tarea.rawStatus">
+            <ion-icon [name]="tarea.accionIcon"></ion-icon>
+          </div>
+
+          <div class="hero-titles">
+            <div class="badges-row">
+              <span class="action-pill">{{ tarea.accionLabel }}</span>
+              <span class="prio-pill" [attr.data-prio]="tarea.prioridad">Prioridad {{ tarea.prioridad }}</span>
+              <span class="status-pill" [attr.data-status]="tarea.rawStatus">
+                {{ tarea.rawStatus === 'FINISH' ? 'Completada' : (tarea.rawStatus === 'IN_PROGESS' ? 'En Progreso' : 'Pendiente') }}
+              </span>
+            </div>
+            <h1 class="main-title">{{ tarea.titulo }}</h1>
+          </div>
+        </div>
+
+        <div class="meta-grid">
+          <div class="meta-item">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>Responsable: <strong>{{ tarea.responsable }}</strong></span>
+          </div>
+          <div class="meta-item">
+            <ion-icon name="person-outline"></ion-icon>
+            <span>Asignó: <strong>{{ tarea.creador }}</strong></span>
+          </div>
+          <div class="meta-item">
+            <ion-icon name="calendar-outline"></ion-icon>
+            <span>Fecha límite: <strong>{{ tarea.fechaVencimiento | date:'dd/MM/yyyy' }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Botones de Ejecución en Campo -->
+        <div class="exec-actions" *ngIf="tarea.rawStatus !== 'FINISH'">
+          <ion-button
+            *ngIf="tarea.rawStatus === 'CREATED'"
+            expand="block"
+            fill="outline"
+            color="primary"
+            [disabled]="isUpdatingStatus"
+            (click)="marcarEnProgreso()">
+            <ion-icon slot="start" name="play-outline"></ion-icon>
+            Iniciar Tarea (En Progreso)
+          </ion-button>
+
+          <ion-button
+            expand="block"
+            color="success"
+            [disabled]="isUpdatingStatus"
+            (click)="abrirModalFinalizar()">
+            <ion-icon slot="start" name="checkmark-done-outline"></ion-icon>
+            Finalizar Tarea
+          </ion-button>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 2. Reporte de Finalización (visible cuando fue completada) -->
+    <ion-card class="detail-card finish-report-card" *ngIf="tarea.rawStatus === 'FINISH'">
+      <ion-card-content class="card-pad">
+        <div class="section-header-between">
+          <h2 class="section-heading" style="margin: 0; color: #15803d;">
+            <ion-icon name="checkmark-circle-outline" style="color: #15803d;"></ion-icon>
+            Reporte de Finalización
+          </h2>
+          <span class="finish-date" *ngIf="tarea.fechaFinalizacion">
+            {{ tarea.fechaFinalizacion | date:'dd/MM/yyyy HH:mm' }} hs
+          </span>
+        </div>
+
+        <p class="desc-text" *ngIf="tarea.observacionCierre">
+          {{ tarea.observacionCierre }}
+        </p>
+        <p class="muted-empty" *ngIf="!tarea.observacionCierre">
+          Tarea completada sin observaciones adicionales.
+        </p>
+
+        <div class="photo-grid" style="margin-top: 10px;" *ngIf="tarea.imagenesCierre.length > 0">
+          <div
+            class="photo-item"
+            *ngFor="let img of tarea.imagenesCierre; let i = index"
+            (click)="abrirVisorImagen(tarea.imagenesCierre, i)">
+            <img [src]="img" alt="Evidencia de cierre" loading="lazy" />
+            <div class="zoom-badge">
+              <ion-icon name="expand-outline"></ion-icon>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 3. Instrucciones y Lote Asignado -->
+    <ion-card class="detail-card">
+      <ion-card-content class="card-pad">
+        <h2 class="section-heading">
+          <ion-icon name="document-text-outline"></ion-icon>
+          Instrucciones de la Labor
+        </h2>
+        <p class="desc-text">{{ tarea.descripcion }}</p>
+
+        <div class="relation-row" style="margin-top: 12px;" (click)="irAlLoteEnMapa()">
+          <div class="rel-left">
+            <div class="rel-icon">
+              <ion-icon name="location-outline"></ion-icon>
+            </div>
+            <div>
+              <span class="rel-type">Sector / Lote Asignado</span>
+              <strong class="rel-name">{{ tarea.lote || 'Finca General' }}</strong>
+            </div>
+          </div>
+          <div class="rel-action" *ngIf="tarea.loteId">
+            <span>Ver en mapa</span>
+            <ion-icon name="chevron-forward-outline"></ion-icon>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 4. Mapa de Campo y Asistencia GPS ("Ubicarme en el Lote") -->
+    <ion-card class="detail-card" *ngIf="tieneGeometria">
+      <ion-card-content class="card-pad">
+        <div class="section-header-between">
+          <h2 class="section-heading" style="margin: 0;">
+            <ion-icon name="map-outline"></ion-icon>
+            Ubicación y Asistencia GPS
+          </h2>
+
+          <ion-button
+            size="small"
+            fill="solid"
+            color="primary"
+            [disabled]="isLocatingGps"
+            (click)="ubicarmeEnElLoteGps()">
+            <ion-spinner *ngIf="isLocatingGps" name="crescent" style="width: 14px; height: 14px; margin-right: 6px;"></ion-spinner>
+            <ion-icon *ngIf="!isLocatingGps" slot="start" name="locate-outline"></ion-icon>
+            Ubicarme en el Lote
+          </ion-button>
+        </div>
+
+        <div
+          class="gps-assist-banner"
+          *ngIf="estadoUbicacionOperario"
+          [class.inside]="estaDentroDelSector">
+          <ion-icon [name]="estaDentroDelSector ? 'checkmark-circle-outline' : 'navigate-outline'"></ion-icon>
+          <span>{{ estadoUbicacionOperario }}</span>
+        </div>
+
+        <div class="map-box">
+          <div id="mapa-tarea-detalle" class="leaflet-box"></div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+
+    <!-- 5. Fotos de Referencia Adjuntas al Crear -->
+    <ion-card class="detail-card" *ngIf="tarea.imagenes.length > 0">
+      <ion-card-content class="card-pad">
+        <div class="section-header-between">
+          <h2 class="section-heading" style="margin: 0;">
+            <ion-icon name="images-outline"></ion-icon>
+            Imágenes de Referencia
+          </h2>
+          <span class="count-pill">{{ tarea.imagenes.length }} foto(s)</span>
+        </div>
+
+        <div class="photo-grid">
+          <div
+            class="photo-item"
+            *ngFor="let img of tarea.imagenes; let i = index"
+            (click)="abrirVisorImagen(tarea.imagenes, i)">
+            <img [src]="img" alt="Referencia" loading="lazy" />
+            <div class="zoom-badge">
+              <ion-icon name="expand-outline"></ion-icon>
+            </div>
+          </div>
+        </div>
+      </ion-card-content>
+    </ion-card>
+  </div>
+
+  <!-- MODAL: Finalizar Tarea con Observaciones y Fotos de Evidencia -->
+  <ion-modal
+    [isOpen]="isCompleteModalOpen"
+    (didDismiss)="cerrarModalFinalizar()"
+    style="--height: auto; --border-radius: 20px 20px 0 0;"
+    [initialBreakpoint]="1"
+    [breakpoints]="[0, 1]">
+    <ng-template>
+      <div style="padding: 18px 16px calc(20px + env(safe-area-inset-bottom, 0px)); background: #fff;">
+        <div style="width: 36px; height: 4px; background: #cbd5e1; border-radius: 99px; margin: 0 auto 12px;"></div>
+        <h3 style="margin: 0 0 6px; font-size: 1.08rem; font-weight: 700; color: #1e293b;">
+          Finalizar Tarea en Campo
+        </h3>
+        <p style="margin: 0 0 12px; font-size: 0.83rem; color: #64748b;">
+          Registra observaciones del trabajo realizado o adjunta fotos como evidencia de finalización.
+        </p>
+
+        <div class="error-banner" *ngIf="completeError">{{ completeError }}</div>
+
+        <ion-list lines="full" style="border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
+          <ion-item>
+            <ion-textarea
+              label="Observaciones / Insumos aplicados (Opcional)"
+              labelPlacement="stacked"
+              rows="3"
+              placeholder="Ej: Labor completada sin inconvenientes. Dosis aplicada según indicación..."
+              [(ngModel)]="observacionCierreInput">
+            </ion-textarea>
+          </ion-item>
+        </ion-list>
+
+        <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+          <ion-button expand="block" fill="outline" color="primary" size="small" style="flex: 1; margin: 0;" (click)="capturarFotoCierre('CAMARA')">
+            <ion-icon slot="start" name="camera-outline"></ion-icon>
+            Cámara
+          </ion-button>
+          <ion-button expand="block" fill="outline" color="secondary" size="small" style="flex: 1; margin: 0;" (click)="capturarFotoCierre('GALERIA')">
+            <ion-icon slot="start" name="images-outline"></ion-icon>
+            Galería
+          </ion-button>
+        </div>
+
+        <input
+          #cierreFileInputFallback
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          multiple
+           hidden
+          (change)="onArchivosCierreFallback($event)" />
+
+        <div class="photo-grid" style="margin-bottom: 14px;" *ngIf="fotosCierreAdjuntas.length > 0">
+          <div class="photo-item" *ngFor="let f of fotosCierreAdjuntas; let idx = index">
+            <img [src]="f.previewUrl" alt="Evidencia" />
+            <button type="button" class="remove-photo-btn" (click)="quitarFotoCierre(idx)">
+              <ion-icon name="close-circle"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <ion-button expand="block" color="success" [disabled]="isUpdatingStatus" (click)="confirmarFinalizarTarea()">
+            <ion-spinner *ngIf="isUpdatingStatus" name="crescent" style="margin-right: 8px;"></ion-spinner>
+            {{ isUpdatingStatus ? 'Guardando cierre...' : 'Confirmar Tarea Completada' }}
+          </ion-button>
+          <ion-button expand="block" fill="clear" color="medium" [disabled]="isUpdatingStatus" (click)="cerrarModalFinalizar()">
+            Cancelar
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL: Visor de Imágenes a Pantalla Completa -->
+  <ion-modal [isOpen]="isImageViewerOpen" (didDismiss)="cerrarVisorImagen()">
+    <ng-template>
+      <div style="display:flex;flex-direction:column;height:100%;background:#0f172a;color:#fff;padding-top:env(safe-area-inset-top, 24px);padding-bottom:env(safe-area-inset-bottom, 16px);" *ngIf="galeriaActiva.length > 0">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:rgba(15,23,42,.9);">
+          <span style="font-weight:700;font-size:.95rem;">Foto {{ imagenActivaIndex + 1 }} de {{ galeriaActiva.length }}</span>
+          <ion-button fill="solid" color="light" size="small" shape="round" (click)="cerrarVisorImagen()">
+            <ion-icon slot="start" name="close-outline"></ion-icon>
+            Cerrar
+          </ion-button>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:12px;overflow:hidden;">
+          <img [src]="galeriaActiva[imagenActivaIndex]" alt="Evidencia" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;" />
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 20px;" *ngIf="galeriaActiva.length > 1">
+          <ion-button fill="outline" color="light" size="small" (click)="imagenAnterior()">
+            <ion-icon slot="start" name="chevron-back-outline"></ion-icon>
+            Anterior
+          </ion-button>
+          <ion-button fill="outline" color="light" size="small" (click)="imagenSiguiente()">
+            Siguiente
+            <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- MODAL: Confirmar Eliminación (OWNER / FOREMAN) -->
+  <ion-modal
+    [isOpen]="isDeleteModalOpen"
+    (didDismiss)="cerrarModalEliminar()"
+    style="--height: auto; --border-radius: 20px 20px 0 0;"
+    [initialBreakpoint]="1"
+    [breakpoints]="[0, 1]">
+    <ng-template>
+      <div style="padding: 20px 16px calc(20px + env(safe-area-inset-bottom, 0px)); background: #fff;" *ngIf="tarea">
+        <h3 style="margin: 0 0 6px; font-size: 1.05rem; font-weight: 700; color: #b91c1c;">
+          Eliminar Tarea Operativa
+        </h3>
+        <p style="margin: 0 0 12px; font-size: 0.84rem; color: #475569;">
+          ¿Confirmas eliminar <strong>"{{ tarea.titulo }}"</strong>? Ingresa el motivo de baja:
+        </p>
+
+        <div class="error-banner" *ngIf="deleteError">{{ deleteError }}</div>
+
+        <ion-list lines="full" style="border-radius: 10px; border: 1px solid #e2e8f0; margin-bottom: 12px;">
+          <ion-item>
+            <ion-textarea
+              label="Motivo de eliminación *"
+              labelPlacement="stacked"
+              rows="2"
+              placeholder="Ej: Reprogramación climática, tarea duplicada..."
+              [(ngModel)]="motivoEliminacion">
+            </ion-textarea>
+          </ion-item>
+        </ion-list>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <ion-button expand="block" color="danger" [disabled]="isDeleting" (click)="confirmarEliminacion()">
+            <ion-spinner *ngIf="isDeleting" name="crescent" style="margin-right: 8px;"></ion-spinner>
+            {{ isDeleting ? 'Eliminando...' : 'Confirmar Eliminación' }}
+          </ion-button>
+          <ion-button expand="block" fill="outline" color="medium" [disabled]="isDeleting" (click)="cerrarModalEliminar()">
+            Cancelar
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

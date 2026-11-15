@@ -1,0 +1,28 @@
+:host { display: flex; flex-direction: column; height: 100%; }
+.form-body { padding: 14px 14px 36px; display: flex; flex-direction: column; gap: 14px; }
+.form-intro p { margin: 0; font-size: 0.84rem; color: #475569; line-height: 1.4; }
+.form-intro strong { color: #1e293b; }
+.error-banner { display: flex; align-items: center; gap: 8px; padding: 11px 12px; border-radius: 10px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-size: 0.82rem; font-weight: 600; }
+.form-card { margin: 0; border-radius: 14px; background: #fff; box-shadow: 0 3px 12px rgba(15,23,42,.06); border: 1px solid #eef2f6; }
+.card-pad { padding: 16px; }
+.section-heading { margin: 0 0 10px; font-size: 0.98rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+.section-heading ion-icon { color: #0d8a5c; font-size: 1.15rem; }
+.clean-list { padding: 0; background: transparent; }
+.clean-list ion-item { --padding-start: 0; --inner-padding-end: 0; --background: transparent; }
+.native-date-input { width: 100%; border: 0; background: transparent; padding: 8px 0; font-size: 0.95rem; color: #1e293b; outline: none; }
+.geo-tools-block { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.geo-buttons-row, .camera-buttons-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.camera-buttons-row ion-button { flex: 1; margin: 0; }
+.gps-status-chip { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 10px; border-radius: 8px; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; font-size: 0.78rem; }
+.gps-status-chip.subzone { background: #fffbeb; color: #b45309; border-color: #fde68a; }
+.chip-left { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.chip-clear { border: 0; background: transparent; color: #b91c1c; font-size: 0.75rem; font-weight: 700; flex-shrink: 0; }
+.preview-map-container { position: relative; height: 220px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+.preview-map { width: 100%; height: 100%; z-index: 1; }
+.photo-helper { margin: 0 0 10px; font-size: 0.8rem; color: #64748b; line-height: 1.4; }
+.previews-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; margin-top: 12px; }
+.preview-item { position: relative; aspect-ratio: 1 / 1; border-radius: 10px; overflow: hidden; border: 1px solid #cbd5e1; background: #f8fafc; }
+.preview-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.size-tag { position: absolute; bottom: 4px; left: 4px; padding: 2px 6px; border-radius: 4px; background: rgba(15,23,42,.72); color: #fff; font-size: 0.65rem; font-weight: 600; }
+.remove-photo-btn { position: absolute; top: 3px; right: 3px; border: 0; background: rgba(255,255,255,.9); color: #dc2626; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; padding: 0; }
+.form-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }

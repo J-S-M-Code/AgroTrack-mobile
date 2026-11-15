@@ -1,0 +1,46 @@
+:host { display: flex; flex-direction: column; height: 100%; }
+
+.form-body { padding: 14px 14px 36px; display: flex; flex-direction: column; gap: 14px; }
+.form-intro p { margin: 0; font-size: 0.85rem; color: #475569; line-height: 1.4; }
+.form-intro strong { color: #1e293b; }
+
+.form-card { margin: 0; border-radius: 14px; background: #fff; box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06); border: 1px solid #eef2f6; }
+.card-pad { padding: 16px; }
+
+.section-heading { margin: 0 0 10px; font-size: 1rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 8px; }
+.section-heading ion-icon { color: var(--ion-color-primary); font-size: 1.15rem; }
+
+.clean-list { padding: 0; background: transparent; }
+.clean-list ion-item { --padding-start: 0; --inner-padding-end: 0; --background: transparent; }
+
+.autocomplete-anchor { position: relative; height: 0; z-index: 30; }
+.species-dropdown {
+  position: absolute; top: 2px; left: 0; right: 0; max-height: 184px; overflow-y: auto;
+  background: #fff; border: 1px solid #cbd5e1; border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.12); padding: 4px;
+}
+.species-option {
+  width: 100%; display: flex; align-items: center; gap: 8px; border: 0; background: transparent;
+  padding: 9px 10px; border-radius: 7px; font-size: 0.9rem; color: #1e293b; text-align: left;
+}
+.species-option:active { background: #e6f4ea; color: var(--ion-color-primary); }
+.species-option ion-icon { color: var(--ion-color-primary); font-size: 1rem; flex-shrink: 0; }
+
+.perennial-item { margin-top: 6px; }
+.toggle-sub { margin: 2px 0 0; font-size: 0.76rem; color: #64748b; font-weight: 400; }
+
+.surface-hint { margin: 6px 0 4px; font-size: 0.76rem; color: #64748b; }
+.surface-hint strong { color: var(--ion-color-primary); }
+
+.preview-block { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+.preview-label { font-size: 0.82rem; font-weight: 600; color: #475569; }
+.preview-map-container { position: relative; height: 210px; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+.preview-map { width: 100%; height: 100%; z-index: 1; }
+.map-empty-overlay {
+  position: absolute; inset: 0; z-index: 500; background: rgba(248, 250, 252, 0.92);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 16px; text-align: center; font-size: 0.82rem; color: #64748b;
+}
+.map-empty-overlay ion-icon { font-size: 1.8rem; color: #94a3b8; }
+
+.form-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }

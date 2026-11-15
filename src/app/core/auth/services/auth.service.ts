@@ -1,0 +1,221 @@
+import { Injectable, OnDestroy, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, firstValueFrom, switchMap, timeout } from 'rxjs';
+import { Router } from '@angular/router';
+import { App } from '@capacitor/app';
+import { Preferences } from '@capacitor/preferences';
+import { environment } from '../../../../environments/environment';
+import { ContextService } from '../../services/context.service';
+import { NetworkService } from '../../services/network.service';
+
+const TOKEN_KEY = 'agrotrack_token';
+const USER_ID_KEY = 'userId';
+const REFRESH_THRESHOLD_SECONDS = 24 * 60 * 60; // 24 horas
+
+@Injectable({
+  providedIn: 'root',
+})
+export class AuthService implements OnDestroy {
+  private apiUrl = environment.apiUrl + '/auth';
+  private contextService = inject(ContextService);
+  private networkService = inject(NetworkService);
+
+  private authStatusSubj = new BehaviorSubject<boolean>(false);
+  public authStatus$ = this.authStatusSubj.asObservable();
+
+  private memoryToken: string | null = null;
+  private memoryUserId: string | null = null;
+  private refreshInFlight: Promise<string | null> | null = null;
+  private expirationTimer: ReturnType<typeof setTimeout> | null = null;
+
+  constructor(private http: HttpClient, private router: Router) {
+    this.checkInitialToken();
+    this.initAppStateListener();
+  }
+
+  ngOnDestroy(): void {
+    this.clearExpirationTimer();
+  }
+
+  private async checkInitialToken() {
+    const validToken = await this.refreshTokenIfNeeded();
+    this.authStatusSubj.next(!!validToken);
+  }
+
+  private initAppStateListener(): void {
+    try {
+      void App.addListener('appStateChange', ({ isActive }) => {
+        if (isActive) {
+          void this.refreshTokenIfNeeded();
+        }
+      }).catch(() => {});
+    } catch {
+      // Ignorar en entornos de test sin plugin nativo
+    }
+  }
+
+  login(credentials: any): Observable<any> {
+    return this.http.post<any>(`${this.apiUrl}/login`, credentials).pipe(
+      switchMap(async (response) => {
+        if (response && response.token) {
+          await this.setToken(response.token);
+          this.authStatusSubj.next(true);
+        }
+        return response;
+      })
+    );
+  }
+
+  async logout(): Promise<void> {
+    this.clearExpirationTimer();
+    this.memoryToken = null;
+    this.memoryUserId = null;
+    this.contextService.clearFarmContext();
+    await Preferences.remove({ key: TOKEN_KEY });
+    await Preferences.remove({ key: USER_ID_KEY });
+    this.authStatusSubj.next(false);
+    await this.router.navigate(['/login'], { replaceUrl: true });
+  }
+
+  async setToken(token: string): Promise<void> {
+    this.memoryToken = token;
+    await Preferences.set({ key: TOKEN_KEY, value: token });
+    try {
+      const payload = this.decodePayload(token);
+      if (payload && payload.sub) {
+        this.memoryUserId = payload.sub;
+        await Preferences.set({ key: USER_ID_KEY, value: payload.sub });
+      }
+    } catch (e) {
+      console.error('Error parsing token', e);
+    }
+    this.scheduleExpirationCheck(token);
+  }
+
+  async getToken(): Promise<string | null> {
+    if (this.memoryToken) {
+      return this.memoryToken;
+    }
+    const { value } = await Preferences.get({ key: TOKEN_KEY });
+    this.memoryToken = value;
+    return value;
+  }
+
+  /**
+   * Verifica la vigencia del token y lo renueva silenciosamente si le restan menos de 24 horas.
+   */
+  async refreshTokenIfNeeded(): Promise<string | null> {
+    const token = await this.getToken();
+    if (!token) return null;
+
+    const payload = this.decodePayload(token);
+    if (!payload || !payload.exp) {
+      return token;
+    }
+
+    const nowSec = Math.floor(Date.now() / 1000);
+    const remainingSec = payload.exp - nowSec;
+
+    if (remainingSec <= 0) {
+      await this.logout();
+      return null;
+    }
+
+    this.scheduleExpirationCheck(token);
+
+    if (!this.networkService.isOnlineSnapshot) {
+      return token;
+    }
+
+    if (remainingSec < REFRESH_THRESHOLD_SECONDS) {
+      return this.executeSilentRefresh(token);
+    }
+
+    return token;
+  }
+
+  private clearExpirationTimer(): void {
+    if (this.expirationTimer !== null) {
+      clearTimeout(this.expirationTimer);
+      this.expirationTimer = null;
+    }
+  }
+
+  private scheduleExpirationCheck(token: string): void {
+    this.clearExpirationTimer();
+    const payload = this.decodePayload(token);
+    if (!payload || !payload.exp) {
+      return;
+    }
+    const msUntilExp = payload.exp * 1000 - Date.now();
+    if (msUntilExp <= 0) {
+      void this.logout();
+      return;
+    }
+    const delayMs = Math.min(msUntilExp + 250, 2147483647);
+    this.expirationTimer = setTimeout(() => {
+      this.expirationTimer = null;
+      void this.refreshTokenIfNeeded();
+    }, delayMs);
+  }
+
+  private async executeSilentRefresh(currentToken: string): Promise<string | null> {
+    if (!this.networkService.isOnlineSnapshot) {
+      return currentToken;
+    }
+    if (this.refreshInFlight) {
+      return this.refreshInFlight;
+    }
+
+    this.refreshInFlight = (async () => {
+      try {
+        const res = await firstValueFrom(
+          this.http
+            .post<{ token: string }>(`${this.apiUrl}/refresh`, {})
+            .pipe(timeout(3000))
+        );
+        if (res && res.token) {
+          await this.setToken(res.token);
+          this.authStatusSubj.next(true);
+          return res.token;
+        }
+        return currentToken;
+      } catch (err: any) {
+        if (err?.status === 401 || err?.status === 403) {
+          await this.logout();
+          return null;
+        }
+        return currentToken;
+      } finally {
+        this.refreshInFlight = null;
+      }
+    })();
+
+    return this.refreshInFlight;
+  }
+
+  private decodePayload(token: string): any | null {
+    try {
+      const parts = token.split('.');
+      if (parts.length < 2) return null;
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(base64));
+    } catch {
+      return null;
+    }
+  }
+
+  async getUserId(): Promise<string | null> {
+    const { value } = await Preferences.get({ key: USER_ID_KEY });
+    if (value) return value;
+    const token = await this.getToken();
+    if (!token) return null;
+    const payload = this.decodePayload(token);
+    return payload?.sub || null;
+  }
+
+  async hasToken(): Promise<boolean> {
+    const token = await this.refreshTokenIfNeeded();
+    return !!token;
+  }
+}

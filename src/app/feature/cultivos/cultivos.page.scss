@@ -1,0 +1,52 @@
+:host { display: flex; flex-direction: column; height: 100%; }
+
+.filter-header-btn { position: relative; }
+.filter-badge { position: absolute; top: 4px; right: 2px; font-size: 0.65rem; border-radius: 99px; }
+
+.controls-toolbar { --background: #fff; --padding-start: 12px; --padding-end: 12px; border-bottom: 1px solid #e2e8f0; }
+.controls-wrapper, .crops-list, .cycle-progress-box, .alerts-container, .modal-actions-footer { display: flex; flex-direction: column; gap: 8px; }
+.crops-searchbar { --background: var(--ion-color-light); --border-radius: 10px; --box-shadow: none; padding: 0; }
+.crops-segment { --background: var(--ion-color-light); border-radius: 10px; padding: 2px; }
+.crops-segment ion-segment-button {
+  --indicator-color: #fff; --color: #64748b; --color-checked: var(--ion-color-primary);
+  min-height: 34px; font-size: 0.78rem; font-weight: 600; text-transform: none;
+}
+
+.page-body { padding: 14px 14px 88px; }
+.crops-list { gap: 12px; }
+
+.farm-context-banner, .meta-row, .phenological-row, .dates-row, .card-top-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+}
+.farm-context-banner { margin-bottom: 12px; font-size: 0.84rem; color: #475569; }
+.farm-context-info, .species-group, .active-filters-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.results-count { font-size: 0.78rem; font-weight: 600; color: #64748b; background: #e2e8f0; padding: 2px 8px; border-radius: 99px; }
+.active-filters-row { margin-bottom: 12px; }
+.clear-inline-btn { border: 0; background: 0; color: var(--ion-color-danger); font-size: 0.8rem; font-weight: 600; }
+
+.crop-card { margin: 0; border-radius: 14px; background: #fff; box-shadow: 0 3px 12px rgba(15, 23, 42, 0.06); border: 1px solid #eef2f6; }
+.crop-card-content { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+
+.species-title { margin: 0; font-size: 1.15rem; font-weight: 700; color: #1e293b; }
+.variety-badge, .perennial-badge { padding: 3px 10px; border-radius: 99px; font-size: 0.75rem; font-weight: 600; }
+.variety-badge { background: #e6f4ea; color: #0d8a5c; }
+.perennial-badge { display: inline-flex; align-items: center; gap: 3px; background: #f1f5f9; color: #475569; }
+.card-chevron { color: #94a3b8; }
+
+.meta-row { padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
+.lot-chip { display: inline-flex; align-items: center; gap: 4px; font-size: 0.85rem; color: #475569; }
+.lot-chip.unassigned { color: #b45309; }
+.surface-text { font-size: 0.8rem; font-weight: 600; color: #334155; background: #f8fafc; padding: 2px 8px; border-radius: 6px; }
+
+.state-label, .dates-row, .modal-helper-text { font-size: 0.8rem; color: #64748b; }
+.cycle-progress-box { background: #f8fafc; border-radius: 10px; padding: 10px 12px; }
+.progress-wrapper { display: flex; align-items: center; gap: 10px; }
+.progress-wrapper ion-progress-bar { height: 8px; border-radius: 99px; }
+.progress-pct { font-size: 0.76rem; font-weight: 700; color: var(--ion-color-primary); min-width: 34px; text-align: right; }
+
+.alert-banner { display: flex; align-items: center; gap: 8px; padding: 9px 11px; border-radius: 8px; font-size: 0.8rem; border-left: 3px solid; }
+.alert-banner.optimal { background: #ecfdf5; color: #166534; border-left-color: #22c55e; }
+.alert-banner.warning { background: #fffbeb; color: #92400e; border-left-color: #f59e0b; }
+
+.filter-modal-list { border-radius: 12px; overflow: hidden; margin-bottom: 16px; }
+.disabled-lot-hint { margin: 6px 12px 10px; font-size: 0.78rem; color: #b45309; }
