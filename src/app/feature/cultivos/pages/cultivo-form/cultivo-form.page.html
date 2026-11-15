@@ -17,7 +17,8 @@
   <form
     class="form-body"
     *ngIf="!isLoading"
-    (submit)="guardarCultivo(); $event.preventDefault()">
+    [formGroup]="cultivoForm"
+    (ngSubmit)="guardarCultivo()">
 
     <div class="form-intro">
       <p>
@@ -44,8 +45,7 @@
               label="Tipo de Cultivo *"
               labelPlacement="stacked"
               interface="popover"
-              name="typeCrop"
-              [(ngModel)]="typeCrop"
+              formControlName="typeCrop"
               (ionChange)="actualizarSugerenciasEspecie()">
               <ion-select-option *ngFor="let tc of tiposCultivo" [value]="tc.value">
                 {{ tc.label }}
@@ -59,12 +59,10 @@
               labelPlacement="stacked"
               placeholder="Ej: Vid, Nogal, Olivo..."
               autocomplete="off"
-              name="especie"
-              [(ngModel)]="especie"
+              formControlName="especie"
               (ionFocus)="onEspecieFocus()"
               (ionInput)="onEspecieInput($event)"
-              (ionBlur)="onEspecieBlur()"
-              required>
+              (ionBlur)="onEspecieBlur()">
             </ion-input>
           </ion-item>
         </ion-list>
@@ -90,9 +88,7 @@
               label="Variedad *"
               labelPlacement="stacked"
               placeholder="Ej: Malbec, Chandler, Arauco..."
-              name="variedad"
-              [(ngModel)]="variedad"
-              required>
+              formControlName="variedad">
             </ion-input>
           </ion-item>
 
@@ -101,9 +97,7 @@
             <input
               type="date"
               class="native-date-input"
-              name="fechaPlantacion"
-              [(ngModel)]="fechaPlantacion"
-              required />
+              formControlName="fechaPlantacion" />
           </ion-item>
 
           <ion-item>
@@ -111,16 +105,13 @@
             <input
               type="date"
               class="native-date-input"
-              name="fechaCosecha"
-              [(ngModel)]="fechaCosecha"
-              required />
+              formControlName="fechaCosecha" />
           </ion-item>
 
           <ion-item lines="none" class="perennial-item">
             <ion-toggle
               justify="space-between"
-              name="isPerennial"
-              [(ngModel)]="isPerennial">
+              formControlName="isPerennial">
               <div>
                 <strong>¿Es cultivo perenne?</strong>
                 <p class="toggle-sub">No finaliza tras la cosecha (ej. frutales)</p>
@@ -155,9 +146,7 @@
               labelPlacement="stacked"
               interface="popover"
               placeholder="Selecciona un lote agrícola..."
-              name="selectedLotId"
-              [value]="selectedLotId"
-              [disabled]="esEdicion && tieneLoteOriginal"
+              formControlName="selectedLotId"
               (ionChange)="onLoteChange($event)">
               <ion-select-option *ngFor="let lote of lotesAgricolas" [value]="lote.id">
                 {{ lote.name }} ({{ lote.hectares | number:'1.1-2' }} ha)
@@ -172,9 +161,7 @@
               label="Superficie Implantada (Hectáreas) *"
               labelPlacement="stacked"
               placeholder="Ej: 12.5"
-              name="hectareas"
-              [(ngModel)]="hectareas"
-              required>
+              formControlName="hectareas">
             </ion-input>
           </ion-item>
 
@@ -188,9 +175,7 @@
               label="Nº RENSPA (SENASA) *"
               labelPlacement="stacked"
               placeholder="Ej: 12.345.678/01"
-              name="renspa"
-              [(ngModel)]="renspa"
-              required>
+              formControlName="renspa">
             </ion-input>
           </ion-item>
         </ion-list>

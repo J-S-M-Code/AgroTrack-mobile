@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { finalize } from 'rxjs/operators';
@@ -40,7 +40,7 @@ import { Cultivo } from '../../core/models/cultivo.model';
   styleUrls: ['./mapa.page.scss'],
   standalone: true,
   imports: [
-    CommonModule, FormsModule,
+    CommonModule, ReactiveFormsModule,
     IonHeader, IonToolbar, IonButtons, IonMenuButton, IonTitle, 
     IonContent, IonFab, IonFabButton, IonIcon, IonFabList, 
     IonModal, IonButton, IonList, IonListHeader, IonItem, 
@@ -49,6 +49,7 @@ import { Cultivo } from '../../core/models/cultivo.model';
   ]
 })
 export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy {
+  private fb = inject(FormBuilder);
   contextService = inject(ContextService);
   lotService = inject(LotService);
   spectralMapService = inject(SpectralMapService);
@@ -112,14 +113,44 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
   puntosDibujados: L.LatLng[] = [];
   private currentDrawLayer: L.Polygon | L.Circle | null = null;
 
-  // Formulario nuevo lote
-  nuevoLoteNombre = '';
+  // Formulario reactivo nuevo lote
   nuevoLoteHectareas = 0;
-  nuevoLoteTipo = 'PASTURE';
-  nuevoLoteSuelo = 'UNKNOWN';
-  nuevoLoteDescripcion = '';
+  loteForm = this.fb.nonNullable.group({
+    nombre: ['', [Validators.required, Validators.pattern(/\S+/)]],
+    tipo: ['PASTURE', [Validators.required]],
+    suelo: ['UNKNOWN', [Validators.required]],
+    descripcion: [''],
+  });
   guardandoLote = false;
   errorGuardandoLote: string | null = null;
+
+  get nuevoLoteNombre(): string {
+    return this.loteForm.controls.nombre.value;
+  }
+  set nuevoLoteNombre(value: string) {
+    this.loteForm.controls.nombre.setValue(value);
+  }
+
+  get nuevoLoteTipo(): string {
+    return this.loteForm.controls.tipo.value;
+  }
+  set nuevoLoteTipo(value: string) {
+    this.loteForm.controls.tipo.setValue(value);
+  }
+
+  get nuevoLoteSuelo(): string {
+    return this.loteForm.controls.suelo.value;
+  }
+  set nuevoLoteSuelo(value: string) {
+    this.loteForm.controls.suelo.setValue(value);
+  }
+
+  get nuevoLoteDescripcion(): string {
+    return this.loteForm.controls.descripcion.value;
+  }
+  set nuevoLoteDescripcion(value: string) {
+    this.loteForm.controls.descripcion.setValue(value);
+  }
 
   constructor() {
     addIcons({
@@ -698,6 +729,8 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
 
   abrirModalGuardar() {
     this.errorGuardandoLote = null;
+    this.loteForm.markAsPristine();
+    this.loteForm.markAsUntouched();
     if (this.currentDrawLayer) {
       (this.currentDrawLayer as any)?.pm?.disable();
     }
@@ -717,11 +750,17 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
   }
 
   guardarLote() {
-    if (!this.fincaActiva || !this.nuevoLoteNombre.trim() || !this.currentDrawLayer || this.guardandoLote) return;
+    if (this.loteForm.invalid) {
+      this.loteForm.markAllAsTouched();
+      this.errorGuardandoLote = 'El nombre del lote es obligatorio.';
+      return;
+    }
+    if (!this.fincaActiva || !this.currentDrawLayer || this.guardandoLote) return;
 
     this.guardandoLote = true;
     this.errorGuardandoLote = null;
 
+    const { nombre, tipo, suelo, descripcion } = this.loteForm.getRawValue();
     let latlngs: any[] = [];
 
     if (this.currentDrawLayer instanceof L.Circle) {
@@ -738,12 +777,12 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
     }
 
     const nuevoLoteDto = {
-      name: this.nuevoLoteNombre.trim(),
+      name: nombre.trim(),
       hectares: this.nuevoLoteHectareas || 1.0,
-      type: this.nuevoLoteTipo,
-      soilType: this.nuevoLoteTipo === 'AGRICULTURAL' || this.nuevoLoteTipo === 'PASTURE' ? this.nuevoLoteSuelo : 'UNKNOWN',
+      type: tipo,
+      soilType: tipo === 'AGRICULTURAL' || tipo === 'PASTURE' ? suelo : 'UNKNOWN',
       state: 'ACTIVE',
-      description: this.nuevoLoteDescripcion,
+      description: descripcion,
       polygonLimit: {
         type: 'Polygon',
         coordinates: [latlngs]
@@ -767,9 +806,12 @@ export class MapaPage implements OnInit, ViewDidEnter, ViewWillLeave, OnDestroy 
           this.isGuardarLoteOpen = false;
           this.cancelarDibujo();
           
-          this.nuevoLoteNombre = '';
-          this.nuevoLoteDescripcion = '';
-          this.nuevoLoteSuelo = 'UNKNOWN';
+          this.loteForm.reset({
+            nombre: '',
+            tipo: 'PASTURE',
+            suelo: 'UNKNOWN',
+            descripcion: ''
+          });
           this.cdr.detectChanges();
         },
         error: (err) => {
