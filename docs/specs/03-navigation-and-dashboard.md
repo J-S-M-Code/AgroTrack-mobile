@@ -19,6 +19,7 @@ Se ajustará la estructura generada para albergar el Dashboard y los servicios v
 
 ## 3. Comportamiento y Diseño de Navegación (Layout Mixto)
 - **Menú Lateral (`ion-menu`):**
+  - **Gesto de Apertura Lateral:** Configurado con `[maxEdgeStart]="70"` para ampliar el margen de deslizamiento desde el borde izquierdo (frente al valor por defecto de `50px` en Ionic) y facilitar la apertura del menú mediante swipe lateral.
   - **Estado Inicial (Sin Finca Seleccionada):** Mostrará un menú reducido con las opciones "Fincas" y "Configuración".
   - **Estado Futuro (Con Finca Seleccionada):** Se expandirá para mostrar Lotes, Mapa, Tareas, Cultivos, Animales. (A implementarse en la interacción de selección).
 - **Barra Superior (`ion-header` en la vista):**

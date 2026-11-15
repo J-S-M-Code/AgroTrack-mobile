@@ -24,14 +24,15 @@ Implementar el módulo completo de **Gestión de Tareas Operativas de Campo (`Ta
 - `src/app/core/services/permission.service.ts`:
   - Método `ensureNotificationPermission(): Promise<boolean>` para gestionar el permiso de notificaciones en Android 13+.
 
-### 2.2. Renovación Silenciosa de Sesión (`AuthService` + `authInterceptor`)
+### 2.2. Renovación Silenciosa y Cierre por Expiración de Sesión (`AuthService` + `authInterceptor`)
 - `src/app/core/auth/services/auth.service.ts`:
   - Decodificación del claim `exp` del token almacenado en `@capacitor/preferences`.
   - Método `refreshTokenIfNeeded(): Promise<string | null>`:
-    - Si el token es válido y le restan menos de **24 horas (`86400` s)** para expirar, invoca `POST /api/v1/auth/refresh` (con control de concurrencia para evitar llamadas duplicadas) y actualiza `auth-token` en `@capacitor/preferences`.
-    - Si el token ya expiró (`exp <= now`), limpia la sesión y redirige a `/login`.
+    - Evalúa primero la vigencia real (`exp <= now`), incluso si la app figura offline: si el token ya expiró, ejecuta `logout()`, limpia el contexto de finca (`ContextService.clearFarmContext()`), emite `authStatus$ = false` y redirige a `/login`.
+    - Si el token sigue vigente y le restan menos de **24 horas (`86400` s)** estando online, invoca `POST /api/v1/auth/refresh` (con control de concurrencia para evitar llamadas duplicadas) y actualiza `agrotrack_token` en `@capacitor/preferences`. Si `/auth/refresh` devuelve `401`/`403`, ejecuta `logout()`.
+  - Programación automática de expiración (`scheduleExpirationCheck`): agenda un temporizador exacto al `exp` del JWT activo para cerrar o intentar renovar la sesión sin esperar navegación del usuario, y escucha `appStateChange` (`@capacitor/app`) al regresar a primer plano.
 - `src/app/core/auth/interceptors/auth.interceptor.ts`:
-  - Verifica y refresca preventivamente el token antes de adjuntar el header `Authorization: Bearer <token>` (excluyendo las rutas `/auth/login`, `/auth/register` y `/auth/refresh`).
+  - Verifica y refresca preventivamente el token antes de adjuntar el header `Authorization: Bearer <token>` (excluyendo las rutas públicas). Si `token` resulta `null`, cancela la petición saliente (`EMPTY`), y si cualquier endpoint autenticado responde `401`, dispara `authService.logout()`.
 
 ### 2.3. Modelos (`src/app/core/models/`)
 - `tarea.model.ts`:

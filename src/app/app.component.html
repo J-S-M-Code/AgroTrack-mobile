@@ -1,6 +1,6 @@
 <ion-app>
   <!-- Menú lateral (Sidebar) - Se deshabilita si no hay sesión -->
-  <ion-menu contentId="main-content" type="overlay" [disabled]="(authService.authStatus$ | async) === false">
+  <ion-menu contentId="main-content" type="overlay" [maxEdgeStart]="70" [disabled]="(authService.authStatus$ | async) === false">
     <ion-header class="ion-no-border">
       <ion-toolbar color="primary">
         <div class="menu-brand-header">
