@@ -2,13 +2,13 @@ import { HttpErrorResponse, HttpInterceptorFn, HttpRequest } from '@angular/comm
 import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
 import { NetworkService } from '../../services/network.service';
-import { TimeoutError, catchError, from, switchMap, tap, throwError, timeout } from 'rxjs';
+import { EMPTY, TimeoutError, catchError, from, switchMap, tap, throwError, timeout } from 'rxjs';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const authService = inject(AuthService);
   const networkService = inject(NetworkService);
 
-  const sendWithTimeout = (request: HttpRequest<unknown>) => {
+  const sendWithTimeout = (request: HttpRequest<unknown>, isPublicRequest = false) => {
     const requestTimeoutMs = request.url.includes('/images') ? 7000 : 3500;
     return next(request).pipe(
       timeout(requestTimeoutMs),
@@ -32,6 +32,9 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
             );
           }
         }
+        if (!isPublicRequest && err?.status === 401) {
+          void authService.logout();
+        }
         return throwError(() => err);
       })
     );
@@ -45,7 +48,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
     req.url.includes(':10000/devstoreaccount1');
 
   if (isAuthPublic) {
-    return sendWithTimeout(req);
+    return sendWithTimeout(req, true);
   }
 
   const isRefreshEndpoint = req.url.includes('/auth/refresh');
@@ -55,15 +58,15 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
 
   return from(tokenPromise).pipe(
     switchMap((token) => {
-      if (token) {
-        const cloned = req.clone({
-          setHeaders: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        return sendWithTimeout(cloned);
+      if (!token) {
+        return EMPTY;
       }
-      return sendWithTimeout(req);
+      const cloned = req.clone({
+        setHeaders: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      return sendWithTimeout(cloned, false);
     })
   );
 };
