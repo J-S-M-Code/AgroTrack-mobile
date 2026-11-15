@@ -1,6 +1,6 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule, Location } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, forkJoin, of, takeUntil, filter, take } from 'rxjs';
 import { finalize } from 'rxjs/operators';
@@ -56,7 +56,7 @@ import { Lot } from '../../../../core/models/lot.model';
   standalone: true,
   imports: [
     CommonModule,
-    FormsModule,
+    ReactiveFormsModule,
     IonHeader,
     IonToolbar,
     IonButtons,
@@ -78,6 +78,7 @@ import { Lot } from '../../../../core/models/lot.model';
   ],
 })
 export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
+  private fb = inject(FormBuilder);
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private location = inject(Location);
@@ -119,17 +120,82 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
   loteSeleccionado: Lot | null = null;
   tieneLoteOriginal = false;
 
-  // Campos del formulario
-  typeCrop: TypeCrop = 'FRUIT';
-  especie = '';
-  variedad = '';
-  fechaPlantacion = '';
-  fechaCosecha = '';
-  isPerennial = false;
-  selectedLotId = '';
-  hectareas: number | null = null;
-  renspa = '';
+  // Formulario reactivo del cultivo
+  cultivoForm = this.fb.group({
+    typeCrop: this.fb.nonNullable.control<TypeCrop>('FRUIT', [Validators.required]),
+    especie: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(/\S+/)]),
+    variedad: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(/\S+/)]),
+    fechaPlantacion: this.fb.nonNullable.control('', [Validators.required]),
+    fechaCosecha: this.fb.nonNullable.control('', [Validators.required]),
+    isPerennial: this.fb.nonNullable.control(false),
+    selectedLotId: this.fb.nonNullable.control('', [Validators.required]),
+    hectareas: this.fb.control<number | null>(null, [Validators.required, Validators.min(0.001)]),
+    renspa: this.fb.nonNullable.control('', [Validators.required, Validators.pattern(/\S+/)]),
+  });
   phenologicalState: PhenologicalState = 'VEGETATIVE_GROWTH';
+
+  get typeCrop(): TypeCrop {
+    return this.cultivoForm.controls.typeCrop.value;
+  }
+  set typeCrop(value: TypeCrop) {
+    this.cultivoForm.controls.typeCrop.setValue(value);
+  }
+
+  get especie(): string {
+    return this.cultivoForm.controls.especie.value;
+  }
+  set especie(value: string) {
+    this.cultivoForm.controls.especie.setValue(value);
+  }
+
+  get variedad(): string {
+    return this.cultivoForm.controls.variedad.value;
+  }
+  set variedad(value: string) {
+    this.cultivoForm.controls.variedad.setValue(value);
+  }
+
+  get fechaPlantacion(): string {
+    return this.cultivoForm.controls.fechaPlantacion.value;
+  }
+  set fechaPlantacion(value: string) {
+    this.cultivoForm.controls.fechaPlantacion.setValue(value);
+  }
+
+  get fechaCosecha(): string {
+    return this.cultivoForm.controls.fechaCosecha.value;
+  }
+  set fechaCosecha(value: string) {
+    this.cultivoForm.controls.fechaCosecha.setValue(value);
+  }
+
+  get isPerennial(): boolean {
+    return this.cultivoForm.controls.isPerennial.value;
+  }
+  set isPerennial(value: boolean) {
+    this.cultivoForm.controls.isPerennial.setValue(value);
+  }
+
+  get selectedLotId(): string {
+    return this.cultivoForm.controls.selectedLotId.value;
+  }
+  set selectedLotId(value: string) {
+    this.cultivoForm.controls.selectedLotId.setValue(value);
+  }
+
+  get hectareas(): number | null {
+    return this.cultivoForm.controls.hectareas.value;
+  }
+  set hectareas(value: number | null) {
+    this.cultivoForm.controls.hectareas.setValue(value);
+  }
+
+  get renspa(): string {
+    return this.cultivoForm.controls.renspa.value;
+  }
+  set renspa(value: string) {
+    this.cultivoForm.controls.renspa.setValue(value);
+  }
 
   constructor() {
     addIcons({
@@ -154,6 +220,10 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
     } else {
       this.preselectedLotId = this.route.snapshot.queryParamMap.get('lotId') || '';
     }
+
+    this.cultivoForm.controls.typeCrop.valueChanges
+      .pipe(takeUntil(this.destroy$))
+      .subscribe(() => this.actualizarSugerenciasEspecie());
 
     this.contextService.selectedFarm$
       .pipe(
@@ -194,14 +264,19 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
           );
 
           if (this.esEdicion && cultivo) {
-            this.typeCrop = cultivo.typeCrop || 'FRUIT';
-            this.especie = cultivo.especie || '';
-            this.variedad = cultivo.variedad || '';
-            this.fechaPlantacion = this.formatearFechaInput(cultivo.fechaPlantacion);
-            this.fechaCosecha = this.formatearFechaInput(cultivo.fechaCosecha);
-            this.isPerennial = Boolean(cultivo.isPerennial);
-            this.hectareas = cultivo.hectareas || null;
-            this.renspa = cultivo.renspa || '';
+            this.cultivoForm.patchValue(
+              {
+                typeCrop: cultivo.typeCrop || 'FRUIT',
+                especie: cultivo.especie || '',
+                variedad: cultivo.variedad || '',
+                fechaPlantacion: this.formatearFechaInput(cultivo.fechaPlantacion),
+                fechaCosecha: this.formatearFechaInput(cultivo.fechaCosecha),
+                isPerennial: Boolean(cultivo.isPerennial),
+                hectareas: cultivo.hectareas || null,
+                renspa: cultivo.renspa || '',
+              },
+              { emitEvent: false }
+            );
             this.phenologicalState = cultivo.phenologicalState || 'VEGETATIVE_GROWTH';
 
             const loteMatch = this.lotesAgricolas.find(
@@ -211,12 +286,18 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
               this.loteSeleccionado = loteMatch;
               this.selectedLotId = loteMatch.id;
               this.tieneLoteOriginal = true;
+              this.cultivoForm.controls.selectedLotId.disable({ emitEvent: false });
+            } else {
+              this.cultivoForm.controls.selectedLotId.enable({ emitEvent: false });
             }
           } else if (this.preselectedLotId) {
+            this.cultivoForm.controls.selectedLotId.enable({ emitEvent: false });
             const lotePre = this.lotesAgricolas.find((l) => l.id === this.preselectedLotId);
             if (lotePre) {
               this.aplicarSeleccionDeLote(lotePre);
             }
+          } else {
+            this.cultivoForm.controls.selectedLotId.enable({ emitEvent: false });
           }
 
           this.isLoading = false;
@@ -242,9 +323,9 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
   }
 
   onEspecieInput(event: any) {
-    this.especie = event?.detail?.value ?? '';
+    const value = event?.detail?.value ?? '';
     this.mostrarSugerenciasEspecie = true;
-    this.actualizarSugerenciasEspecie();
+    this.actualizarSugerenciasEspecie(value);
   }
 
   onEspecieBlur() {
@@ -261,15 +342,17 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
       this.blurTimeout = null;
     }
     this.especie = sp;
+    this.cultivoForm.controls.especie.markAsDirty();
+    this.cultivoForm.controls.especie.markAsTouched();
     this.mostrarSugerenciasEspecie = false;
     this.especiesFiltradas = [];
     this.cdr.detectChanges();
   }
 
-  actualizarSugerenciasEspecie() {
+  actualizarSugerenciasEspecie(overrideTerm?: string) {
     const norm = (s: string) =>
       (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
-    const term = norm(this.especie);
+    const term = norm(overrideTerm ?? this.especie);
     const base = this.especiesPorTipo[this.typeCrop] || this.especiesPorTipo.FRUIT;
 
     if (!term) {
@@ -350,28 +433,41 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
 
   guardarCultivo() {
     this.mensajeError = '';
+    this.cultivoForm.markAllAsTouched();
 
-    if (!this.selectedLotId) {
+    const {
+      selectedLotId,
+      typeCrop,
+      especie,
+      variedad,
+      fechaPlantacion,
+      fechaCosecha,
+      hectareas,
+      renspa,
+      isPerennial,
+    } = this.cultivoForm.getRawValue();
+
+    if (!selectedLotId) {
       this.mensajeError = 'Debes seleccionar un lote agrícola válido.';
       return;
     }
-    if (!this.especie.trim()) {
+    if (!especie.trim()) {
       this.mensajeError = 'La especie del cultivo es obligatoria.';
       return;
     }
-    if (!this.variedad.trim()) {
+    if (!variedad.trim()) {
       this.mensajeError = 'La variedad es obligatoria.';
       return;
     }
-    if (!this.fechaPlantacion || !this.fechaCosecha) {
+    if (!fechaPlantacion || !fechaCosecha) {
       this.mensajeError = 'Completa las fechas de plantación y cosecha estimada.';
       return;
     }
-    if (this.fechaCosecha < this.fechaPlantacion) {
+    if (fechaCosecha < fechaPlantacion) {
       this.mensajeError = 'La fecha estimada de cosecha no puede ser anterior a la plantación.';
       return;
     }
-    const sup = Number(this.hectareas);
+    const sup = Number(hectareas);
     if (!sup || isNaN(sup) || sup <= 0) {
       this.mensajeError = 'La superficie implantada debe ser mayor a 0 hectáreas.';
       return;
@@ -381,22 +477,22 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
       this.mensajeError = `La superficie implantada (${sup} ha) no puede superar la del lote (${maxLote} ha).`;
       return;
     }
-    if (!this.renspa.trim()) {
+    if (!renspa.trim()) {
       this.mensajeError = 'El código RENSPA (SENASA) es obligatorio.';
       return;
     }
 
     const dto: CropUpsertDto = {
-      lotId: this.selectedLotId,
-      typeCrop: this.typeCrop,
-      species: this.especie.trim(),
-      variety: this.variedad.trim(),
-      plantingDate: `${this.fechaPlantacion}T00:00:00`,
-      estimateHarvestDate: `${this.fechaCosecha}T00:00:00`,
+      lotId: selectedLotId,
+      typeCrop,
+      species: especie.trim(),
+      variety: variedad.trim(),
+      plantingDate: `${fechaPlantacion}T00:00:00`,
+      estimateHarvestDate: `${fechaCosecha}T00:00:00`,
       implantedSurface: sup,
-      renspa: this.renspa.trim(),
+      renspa: renspa.trim(),
       phenologicalState: this.esEdicion ? this.phenologicalState : 'VEGETATIVE_GROWTH',
-      isPerennial: this.isPerennial,
+      isPerennial,
     };
 
     this.guardando = true;
@@ -404,7 +500,7 @@ export class CultivoFormPage implements OnInit, ViewDidEnter, OnDestroy {
 
     const request$ = this.esEdicion
       ? this.cropService.updateCrop(this.cultivoId, dto, this.farmId)
-      : this.cropService.registerCrop(this.selectedLotId, dto, this.farmId);
+      : this.cropService.registerCrop(selectedLotId, dto, this.farmId);
 
     request$
       .pipe(

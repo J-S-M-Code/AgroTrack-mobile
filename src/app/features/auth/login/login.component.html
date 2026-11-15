@@ -8,7 +8,7 @@
       <p class="subtitle">Gestión Agrícola Inteligente</p>
     </div>
 
-    <form (ngSubmit)="onSubmit()" #loginForm="ngForm" class="login-form">
+    <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="login-form">
       
       <ion-item *ngIf="errorMessage" color="danger" class="error-msg" lines="none">
         <ion-icon name="warning-outline" slot="start"></ion-icon>
@@ -23,9 +23,7 @@
             inputmode="email"
             autocomplete="email"
             autocapitalize="off"
-            name="email" 
-            [(ngModel)]="credentials.email" 
-            required 
+            formControlName="email"
             placeholder="usuario@agrotrack.com"
             label="Correo Electrónico"
             labelPlacement="floating"
@@ -37,9 +35,7 @@
           <ion-input 
             [type]="showPassword ? 'text' : 'password'"
             autocomplete="current-password"
-            name="password" 
-            [(ngModel)]="credentials.password" 
-            required 
+            formControlName="password"
             placeholder="••••••••"
             label="Contraseña"
             labelPlacement="floating"
@@ -58,7 +54,7 @@
       </ion-list>
 
       <div class="form-actions ion-margin-top">
-        <ion-button expand="block" type="submit" [disabled]="!loginForm.form.valid || isLoading">
+        <ion-button expand="block" type="submit" [disabled]="loginForm.invalid || isLoading">
           <ion-spinner *ngIf="isLoading" name="crescent" slot="start"></ion-spinner>
           <span *ngIf="!isLoading">Ingresar</span>
           <ion-icon *ngIf="!isLoading" name="arrow-forward-outline" slot="end"></ion-icon>

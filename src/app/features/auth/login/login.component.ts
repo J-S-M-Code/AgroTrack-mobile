@@ -1,6 +1,6 @@
 import { Component, OnInit, ChangeDetectorRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { IonContent, IonItem, IonInput, IonButton, IonIcon, IonLabel, IonList, IonSpinner, IonBadge } from '@ionic/angular';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/auth/services/auth.service';
@@ -11,20 +11,39 @@ import { warningOutline, mailOutline, lockClosedOutline, arrowForwardOutline, ey
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, IonContent, IonItem, IonInput, IonButton, IonIcon, IonLabel, IonList, IonSpinner, IonBadge],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink, IonContent, IonItem, IonInput, IonButton, IonIcon, IonLabel, IonList, IonSpinner, IonBadge],
   templateUrl: './login.component.html',
   styleUrls: ['./login.component.scss']
 })
 export class LoginComponent implements OnInit {
+  private fb = inject(FormBuilder);
   private authService = inject(AuthService);
   private networkService = inject(NetworkService);
   private router = inject(Router);
   private cdr = inject(ChangeDetectorRef);
 
-  credentials = {
-    email: '',
-    password: ''
-  };
+  loginForm = this.fb.nonNullable.group({
+    email: ['', [Validators.required, Validators.email]],
+    password: ['', [Validators.required]]
+  });
+
+  get credentials(): { email: string; password: string } {
+    const controls = this.loginForm.controls;
+    return {
+      get email() {
+        return controls.email.value;
+      },
+      set email(value: string) {
+        controls.email.setValue(value);
+      },
+      get password() {
+        return controls.password.value;
+      },
+      set password(value: string) {
+        controls.password.setValue(value);
+      }
+    };
+  }
   showPassword = false;
   isLoading = false;
   errorMessage = '';
@@ -48,8 +67,11 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit() {
-    if (!this.credentials.email || !this.credentials.password) {
-      this.errorMessage = 'Por favor, completa todos los campos.';
+    if (this.loginForm.invalid) {
+      this.loginForm.markAllAsTouched();
+      this.errorMessage = this.loginForm.controls.email.hasError('email')
+        ? 'Ingresá un correo electrónico válido.'
+        : 'Por favor, completa todos los campos.';
       this.cdr.detectChanges();
       return;
     }
@@ -58,7 +80,7 @@ export class LoginComponent implements OnInit {
     this.errorMessage = '';
     this.cdr.detectChanges();
     
-    this.authService.login(this.credentials).subscribe({
+    this.authService.login(this.loginForm.getRawValue()).subscribe({
       next: () => {
         this.isLoading = false;
         this.cdr.detectChanges();
