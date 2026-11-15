@@ -1,0 +1,246 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+
+    <ion-title>Tareas de Campo</ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button (click)="abrirModalFiltros()" class="filter-header-btn">
+        <ion-icon slot="icon-only" name="funnel-outline"></ion-icon>
+        <ion-badge *ngIf="cantidadFiltrosActivos > 0" color="warning" class="filter-badge">
+          {{ cantidadFiltrosActivos }}
+        </ion-badge>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <ion-toolbar class="controls-toolbar">
+    <div class="controls-wrapper">
+      <ion-searchbar
+        [(ngModel)]="terminoBusqueda"
+        (ionInput)="aplicarFiltros()"
+        placeholder="Buscar por labor, responsable o lote..."
+        debounce="150"
+        class="tasks-searchbar">
+      </ion-searchbar>
+
+      <ion-segment
+        [(ngModel)]="segmentoActual"
+        [scrollable]="true"
+        (ionChange)="onSegmentChange()"
+        class="tasks-segment">
+        <ion-segment-button value="Pendientes">
+          <ion-label>Pendientes</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="En Progreso">
+          <ion-label>En Progreso</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="Completadas">
+          <ion-label>Completadas</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="Todas">
+          <ion-label>Todas</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
+    <ion-refresher-content pullingText="Desliza para actualizar" refreshingSpinner="crescent"></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-body">
+    <div class="farm-context-banner" *ngIf="farmName">
+      <div class="farm-context-info">
+        <ion-icon name="location-outline"></ion-icon>
+        <span>Finca: <strong>{{ farmName }}</strong></span>
+      </div>
+      <span class="results-count" *ngIf="!isLoading">{{ tareasFiltradas.length }} tarea(s)</span>
+    </div>
+
+    <div class="active-filters-row" *ngIf="cantidadFiltrosActivos > 0">
+      <ion-chip color="primary" outline="true" *ngIf="filtroPrioridad !== 'Todas'" (click)="filtroPrioridad = 'Todas'; aplicarFiltros()">
+        <ion-label>Prioridad: {{ filtroPrioridad }}</ion-label>
+        <ion-icon name="close-circle"></ion-icon>
+      </ion-chip>
+
+      <ion-chip color="primary" outline="true" *ngIf="filtroAccion !== 'Todas'" (click)="filtroAccion = 'Todas'; aplicarFiltros()">
+        <ion-label>Labor: {{ getAccionLabel(filtroAccion) }}</ion-label>
+        <ion-icon name="close-circle"></ion-icon>
+      </ion-chip>
+
+      <button type="button" class="clear-inline-btn" (click)="limpiarFiltros()">Limpiar todo</button>
+    </div>
+
+    <!-- Estado Cargando -->
+    <div class="state-box" *ngIf="isLoading">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p>Sincronizando tareas operativas...</p>
+    </div>
+
+    <!-- Estado Error -->
+    <div class="state-box error-box" *ngIf="!isLoading && errorMessage">
+      <ion-icon name="warning-outline" color="danger"></ion-icon>
+      <p>{{ errorMessage }}</p>
+      <ion-button fill="outline" color="primary" size="small" (click)="cargarDatos()">
+        <ion-icon slot="start" name="refresh-outline"></ion-icon>
+        Reintentar
+      </ion-button>
+    </div>
+
+    <!-- Estado Vacío -->
+    <div class="state-box empty-box" *ngIf="!isLoading && !errorMessage && tareasFiltradas.length === 0">
+      <div class="empty-icon-circle">
+        <ion-icon name="checkmark-done-circle-outline"></ion-icon>
+      </div>
+      <h3>Sin tareas en esta vista</h3>
+      <p *ngIf="cantidadFiltrosActivos > 0 || terminoBusqueda || segmentoActual !== 'Todas'">
+        No hay tareas que coincidan con el estado o los filtros seleccionados.
+      </p>
+      <p *ngIf="cantidadFiltrosActivos === 0 && !terminoBusqueda && segmentoActual === 'Todas'">
+        Aún no se han asignado tareas operativas en esta finca.
+      </p>
+      <ion-button
+        *ngIf="cantidadFiltrosActivos > 0 || terminoBusqueda || segmentoActual !== 'Todas'"
+        fill="clear"
+        size="small"
+        (click)="segmentoActual = 'Todas'; limpiarFiltros()">
+        Ver todas las tareas
+      </ion-button>
+    </div>
+
+    <!-- Listado de Tareas -->
+    <div class="tasks-list" *ngIf="!isLoading && !errorMessage && tareasFiltradas.length > 0">
+      <ion-card
+        *ngFor="let t of tareasFiltradas"
+        class="task-card"
+        [attr.data-status]="t.rawStatus"
+        button="true"
+        (click)="verDetalle(t)">
+        <ion-card-content class="task-card-content">
+          <div class="card-top-row">
+            <div class="type-pill-group">
+              <div class="type-icon-box" [attr.data-status]="t.rawStatus">
+                <ion-icon [name]="t.accionIcon"></ion-icon>
+              </div>
+              <div>
+                <h2 class="task-title">{{ t.titulo }}</h2>
+                <div class="author-meta">
+                  <ion-icon name="person-outline"></ion-icon>
+                  <span>{{ t.responsable }}</span>
+                  <span>•</span>
+                  <ion-icon name="calendar-outline"></ion-icon>
+                  <span [class.overdue-text]="esVencida(t)">
+                    Vence: {{ t.fechaVencimiento | date:'dd/MM/yyyy' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="badges-col">
+              <span class="prio-badge" [attr.data-prio]="t.prioridad">{{ t.prioridad }}</span>
+              <span class="status-badge" [attr.data-status]="t.rawStatus">
+                {{ t.rawStatus === 'FINISH' ? 'Completada' : (t.rawStatus === 'IN_PROGESS' ? 'En Progreso' : 'Pendiente') }}
+              </span>
+            </div>
+          </div>
+
+          <p class="task-desc">{{ t.descripcion }}</p>
+
+          <div class="card-footer-row">
+            <div class="badges-wrap">
+              <span class="entity-chip">
+                <ion-icon [name]="t.accionIcon"></ion-icon>
+                {{ t.accionLabel }}
+              </span>
+
+              <span class="entity-chip">
+                <ion-icon name="location-outline"></ion-icon>
+                {{ t.lote || 'Finca General' }}
+              </span>
+
+              <span class="sensor-chip photo" *ngIf="totalFotos(t) > 0">
+                <ion-icon name="camera-outline"></ion-icon>
+                {{ totalFotos(t) }} foto{{ totalFotos(t) > 1 ? 's' : '' }}
+              </span>
+
+              <span class="sensor-chip gps" *ngIf="(t.poligono && t.poligono.length > 0) || t.centroide">
+                <ion-icon name="navigate-outline"></ion-icon>
+                Mapa
+              </span>
+            </div>
+
+            <ion-icon name="chevron-forward-outline" class="card-chevron"></ion-icon>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  </div>
+
+  <!-- FAB para Crear Nueva Tarea (OWNER, FOREMAN, AGRONOMIST, VETERINARIAN) -->
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end" *ngIf="farmId && canCreateTask">
+    <ion-fab-button color="primary" (click)="irANuevaTarea()" aria-label="Asignar Nueva Tarea">
+      <ion-icon name="add-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <!-- Modal Bottom Sheet de Filtros -->
+  <ion-modal
+    [isOpen]="isFilterModalOpen"
+    (didDismiss)="cerrarModalFiltros()"
+    style="--height: auto; --border-radius: 20px 20px 0 0;"
+    [initialBreakpoint]="1"
+    [breakpoints]="[0, 1]">
+    <ng-template>
+      <div style="padding: 16px 16px 22px; background: #fff;">
+        <div style="width: 36px; height: 4px; background: #cbd5e1; border-radius: 99px; margin: 0 auto 12px;"></div>
+        <h3 style="margin: 0 0 12px; font-size: 1.05rem; font-weight: 700; color: #1e293b; text-align: center;">
+          Filtrar Tareas
+        </h3>
+
+        <ion-list lines="full" class="filter-modal-list">
+          <ion-item>
+            <ion-select
+              label="Prioridad"
+              labelPlacement="stacked"
+              [(ngModel)]="filtroPrioridad"
+              (ionChange)="aplicarFiltros()"
+              interface="popover">
+              <ion-select-option value="Todas">Todas las prioridades</ion-select-option>
+              <ion-select-option *ngFor="let p of prioridadesDisponibles" [value]="p">
+                {{ p }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item>
+            <ion-select
+              label="Tipo de Labor"
+              labelPlacement="stacked"
+              [(ngModel)]="filtroAccion"
+              (ionChange)="aplicarFiltros()"
+              interface="popover">
+              <ion-select-option value="Todas">Todas las labores</ion-select-option>
+              <ion-select-option *ngFor="let a of accionesDisponibles" [value]="a.value">
+                {{ a.label }}
+              </ion-select-option>
+            </ion-select>
+          </ion-item>
+        </ion-list>
+
+        <div class="modal-actions-footer">
+          <ion-button expand="block" color="primary" (click)="cerrarModalFiltros()">
+            Ver {{ tareasFiltradas.length }} resultado(s)
+          </ion-button>
+          <ion-button expand="block" fill="clear" color="medium" (click)="limpiarFiltros(); cerrarModalFiltros()">
+            Restablecer filtros
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

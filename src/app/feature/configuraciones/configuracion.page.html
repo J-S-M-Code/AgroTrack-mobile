@@ -1,0 +1,794 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/home" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Ajustes y Perfil</ion-title>
+  </ion-toolbar>
+
+  <ion-toolbar color="primary" class="segment-toolbar">
+    <ion-segment [(ngModel)]="pestanaActiva" (ionChange)="onTabChange()" mode="md">
+      <ion-segment-button value="perfil">
+        <ion-icon name="person-outline"></ion-icon>
+        <ion-label>Perfil</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="preferencias">
+        <ion-icon name="options-outline"></ion-icon>
+        <ion-label>Ajustes</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="fincas">
+        <ion-icon name="business-outline"></ion-icon>
+        <ion-label>Fincas</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="collares">
+        <ion-icon name="hardware-chip-outline"></ion-icon>
+        <ion-label>Collares</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding config-content">
+  <!-- ==================== 1. PESTAÑA: PERFIL ==================== -->
+  @if (pestanaActiva === 'perfil') {
+    <div class="tab-pane">
+      @if (cargandoUsuario && !usuario) {
+        <div class="loading-box">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <p>Cargando datos del perfil...</p>
+        </div>
+      } @else {
+        <div class="profile-hero">
+          <div class="avatar-circle">{{ inicialesUsuario }}</div>
+          <h3>{{ usuario?.name }} {{ usuario?.lastName }}</h3>
+          <p class="user-email">{{ usuario?.email }}</p>
+          <ion-badge color="secondary" class="role-badge">
+            {{ usuario?.role || fincaActiva?.myRole || 'COLABORADOR' }}
+          </ion-badge>
+        </div>
+
+        <!-- Datos Personales -->
+        <ion-card class="section-card">
+          <ion-card-header>
+            <div class="header-flex">
+              <div>
+                <ion-card-title>Información Personal</ion-card-title>
+                <ion-card-subtitle>Datos de contacto y residencia</ion-card-subtitle>
+              </div>
+              @if (!modoEdicionPerfil) {
+                <ion-button size="small" fill="outline" color="primary" (click)="activarEdicionPerfil()">
+                  <ion-icon name="create-outline" slot="start"></ion-icon>
+                  Editar
+                </ion-button>
+              }
+            </div>
+          </ion-card-header>
+
+          <ion-card-content>
+            <form (ngSubmit)="guardarPerfil()">
+              <ion-item lines="inset" class="form-item">
+                <ion-input
+                  label="Nombre *"
+                  labelPlacement="stacked"
+                  [(ngModel)]="datosPerfil.name"
+                  name="name"
+                  [readonly]="!modoEdicionPerfil"
+                  required
+                ></ion-input>
+              </ion-item>
+
+              <ion-item lines="inset" class="form-item">
+                <ion-input
+                  label="Apellido *"
+                  labelPlacement="stacked"
+                  [(ngModel)]="datosPerfil.lastName"
+                  name="lastName"
+                  [readonly]="!modoEdicionPerfil"
+                  required
+                ></ion-input>
+              </ion-item>
+
+              <ion-item lines="inset" class="form-item">
+                <ion-input
+                  label="Correo Electrónico"
+                  labelPlacement="stacked"
+                  [value]="usuario?.email"
+                  [readonly]="true"
+                  helperText="El correo institucional no puede modificarse."
+                ></ion-input>
+              </ion-item>
+
+              <ion-item lines="inset" class="form-item">
+                <ion-input
+                  label="Teléfono Celular"
+                  labelPlacement="stacked"
+                  type="tel"
+                  [(ngModel)]="datosPerfil.phone"
+                  name="phone"
+                  [readonly]="!modoEdicionPerfil"
+                  placeholder="+54 9 ..."
+                ></ion-input>
+              </ion-item>
+
+              <ion-item lines="inset" class="form-item">
+                <ion-input
+                  label="Dirección de Residencia"
+                  labelPlacement="stacked"
+                  [(ngModel)]="datosPerfil.address"
+                  name="address"
+                  [readonly]="!modoEdicionPerfil"
+                  placeholder="Domicilio o localidad"
+                ></ion-input>
+              </ion-item>
+
+              @if (modoEdicionPerfil) {
+                <div class="action-row ion-margin-top">
+                  <ion-button fill="outline" color="medium" type="button" (click)="cancelarEdicionPerfil()" [disabled]="guardandoPerfil">
+                    Cancelar
+                  </ion-button>
+                  <ion-button type="submit" [disabled]="guardandoPerfil" class="btn-save">
+                    @if (guardandoPerfil) {
+                      <ion-spinner name="crescent" slot="start"></ion-spinner>
+                      Guardando...
+                    } @else {
+                      <ion-icon name="save-outline" slot="start"></ion-icon>
+                      Guardar Cambios
+                    }
+                  </ion-button>
+                </div>
+              }
+            </form>
+          </ion-card-content>
+        </ion-card>
+
+        <!-- Seguridad: Cambiar Contraseña -->
+        <ion-card class="section-card">
+          <ion-card-header (click)="toggleSeccionPassword()">
+            <div class="header-flex">
+              <div>
+                <ion-card-title>Cambiar Contraseña</ion-card-title>
+                <ion-card-subtitle>Actualiza tu clave de acceso</ion-card-subtitle>
+              </div>
+              <ion-button fill="clear" size="small" color="primary">
+                {{ mostrarSeccionPassword ? 'Ocultar' : 'Cambiar' }}
+              </ion-button>
+            </div>
+          </ion-card-header>
+
+          @if (mostrarSeccionPassword) {
+            <ion-card-content>
+              <form (ngSubmit)="actualizarPassword()">
+                <ion-item lines="inset" class="form-item">
+                  <ion-input
+                    label="Contraseña Actual *"
+                    labelPlacement="stacked"
+                    [type]="verPasswordActual ? 'text' : 'password'"
+                    [(ngModel)]="passwordData.currentPassword"
+                    name="currentPassword"
+                    required
+                  ></ion-input>
+                  <ion-button fill="clear" slot="end" type="button" (click)="verPasswordActual = !verPasswordActual">
+                    <ion-icon [name]="verPasswordActual ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+                  </ion-button>
+                </ion-item>
+
+                <ion-item lines="inset" class="form-item">
+                  <ion-input
+                    label="Nueva Contraseña *"
+                    labelPlacement="stacked"
+                    [type]="verPasswordNueva ? 'text' : 'password'"
+                    [(ngModel)]="passwordData.newPassword"
+                    name="newPassword"
+                    placeholder="Mínimo 6 caracteres"
+                    required
+                  ></ion-input>
+                  <ion-button fill="clear" slot="end" type="button" (click)="verPasswordNueva = !verPasswordNueva">
+                    <ion-icon [name]="verPasswordNueva ? 'eye-off-outline' : 'eye-outline'"></ion-icon>
+                  </ion-button>
+                </ion-item>
+
+                <ion-item lines="inset" class="form-item">
+                  <ion-input
+                    label="Confirmar Nueva Contraseña *"
+                    labelPlacement="stacked"
+                    type="password"
+                    [(ngModel)]="passwordData.confirmPassword"
+                    name="confirmPassword"
+                    required
+                  ></ion-input>
+                </ion-item>
+
+                <div class="ion-margin-top">
+                  <ion-button
+                    expand="block"
+                    type="submit"
+                    color="secondary"
+                    [disabled]="guardandoPassword || !passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword"
+                  >
+                    @if (guardandoPassword) {
+                      <ion-spinner name="crescent" slot="start"></ion-spinner>
+                      Actualizando...
+                    } @else {
+                      <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
+                      Actualizar Contraseña
+                    }
+                  </ion-button>
+                </div>
+              </form>
+            </ion-card-content>
+          }
+        </ion-card>
+      }
+    </div>
+  }
+
+  <!-- ==================== 2. PESTAÑA: PREFERENCIAS Y SENSORES ==================== -->
+  @if (pestanaActiva === 'preferencias') {
+    <div class="tab-pane">
+      <!-- Unidades y Visualización -->
+      <ion-card class="section-card">
+        <ion-card-header>
+          <ion-card-title>Preferencias del Sistema</ion-card-title>
+          <ion-card-subtitle>Unidades agronómicas y visualización</ion-card-subtitle>
+        </ion-card-header>
+
+        <ion-card-content>
+          <ion-item lines="inset" class="pref-item">
+            <ion-label>Unidad de Superficie</ion-label>
+            <ion-select
+              [value]="preferencias.unidadSuperficie"
+              (ionChange)="actualizarPreferencia('unidadSuperficie', $event.detail.value)"
+              interface="popover"
+            >
+              <ion-select-option value="ha">Hectáreas (ha)</ion-select-option>
+              <ion-select-option value="ac">Acres (ac)</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item lines="inset" class="pref-item">
+            <ion-label>Unidad de Temperatura</ion-label>
+            <ion-select
+              [value]="preferencias.unidadTemperatura"
+              (ionChange)="actualizarPreferencia('unidadTemperatura', $event.detail.value)"
+              interface="popover"
+            >
+              <ion-select-option value="C">Celsius (°C)</ion-select-option>
+              <ion-select-option value="F">Fahrenheit (°F)</ion-select-option>
+            </ion-select>
+          </ion-item>
+
+          <ion-item lines="inset" class="pref-item">
+            <ion-label>
+              <h3>Modo Alto Contraste en Campo</h3>
+              <p>Resalta bordes para legibilidad bajo luz solar</p>
+            </ion-label>
+            <ion-toggle
+              slot="end"
+              [checked]="preferencias.altoContraste"
+              (ionChange)="actualizarPreferencia('altoContraste', $event.detail.checked)"
+            ></ion-toggle>
+          </ion-item>
+
+          <ion-item lines="none" class="pref-item">
+            <ion-label>
+              <h3>Notificaciones Locales</h3>
+              <p>Recibir alertas críticas y tareas en el dispositivo</p>
+            </ion-label>
+            <ion-toggle
+              slot="end"
+              [checked]="preferencias.notificacionesHabilitadas"
+              (ionChange)="actualizarPreferencia('notificacionesHabilitadas', $event.detail.checked)"
+            ></ion-toggle>
+          </ion-item>
+        </ion-card-content>
+      </ion-card>
+
+      <!-- Permisos Nativos del Dispositivo -->
+      <ion-card class="section-card">
+        <ion-card-header>
+          <div class="header-flex">
+            <div>
+              <ion-card-title>Permisos del Dispositivo</ion-card-title>
+              <ion-card-subtitle>Estado de sensores nativos en campo</ion-card-subtitle>
+            </div>
+            <ion-button fill="clear" size="small" (click)="cargarAuditoriaPermisos()" [disabled]="verificandoPermisos">
+              <ion-icon name="refresh-outline" slot="icon-only"></ion-icon>
+            </ion-button>
+          </div>
+        </ion-card-header>
+
+        <ion-card-content>
+          <div class="perm-list">
+            <div class="permission-item">
+              <div class="perm-icon-box camera"><ion-icon name="camera-outline"></ion-icon></div>
+              <div class="perm-details">
+                <h4>Cámara</h4>
+                <p>Evidencia fotográfica en lote</p>
+              </div>
+              <ion-badge [color]="permisos.camera === 'granted' ? 'success' : 'danger'">
+                {{ permisos.camera === 'granted' ? 'Activo' : 'Inactivo' }}
+              </ion-badge>
+              @if (permisos.camera !== 'granted') {
+                <ion-button size="small" fill="outline" (click)="solicitarPermiso('CAMARA')">Activar</ion-button>
+              }
+            </div>
+
+            <div class="permission-item">
+              <div class="perm-icon-box photos"><ion-icon name="images-outline"></ion-icon></div>
+              <div class="perm-details">
+                <h4>Galería</h4>
+                <p>Adjuntar fotos existentes</p>
+              </div>
+              <ion-badge [color]="permisos.photos === 'granted' ? 'success' : 'warning'">
+                {{ permisos.photos === 'granted' ? 'Activo' : 'Revisar' }}
+              </ion-badge>
+              @if (permisos.photos !== 'granted') {
+                <ion-button size="small" fill="outline" (click)="solicitarPermiso('GALERIA')">Activar</ion-button>
+              }
+            </div>
+
+            <div class="permission-item">
+              <div class="perm-icon-box location"><ion-icon name="location-outline"></ion-icon></div>
+              <div class="perm-details">
+                <h4>Ubicación GPS</h4>
+                <p>Detección de lotes y mapas</p>
+              </div>
+              <ion-badge [color]="permisos.location === 'granted' ? 'success' : 'danger'">
+                {{ permisos.location === 'granted' ? 'Activo' : 'Inactivo' }}
+              </ion-badge>
+              @if (permisos.location !== 'granted') {
+                <ion-button size="small" fill="outline" (click)="solicitarPermiso('UBICACION')">Activar</ion-button>
+              }
+            </div>
+
+            <div class="permission-item">
+              <div class="perm-icon-box notifications"><ion-icon name="notifications-outline"></ion-icon></div>
+              <div class="perm-details">
+                <h4>Notificaciones</h4>
+                <p>Avisos en segundo plano</p>
+              </div>
+              <ion-badge [color]="permisos.notifications === 'granted' ? 'success' : 'warning'">
+                {{ permisos.notifications === 'granted' ? 'Activo' : 'Pendiente' }}
+              </ion-badge>
+              @if (permisos.notifications !== 'granted') {
+                <ion-button size="small" fill="outline" (click)="solicitarPermiso('NOTIFICACIONES')">Activar</ion-button>
+              }
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+    </div>
+  }
+
+  <!-- ==================== 3. PESTAÑA: GESTIÓN DE FINCAS ==================== -->
+  @if (pestanaActiva === 'fincas') {
+    <div class="tab-pane">
+      @if (cargandoFincas && fincas.length === 0) {
+        <div class="loading-box">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <p>Cargando establecimientos...</p>
+        </div>
+      } @else if (fincas.length === 0) {
+        <div class="empty-box">
+          <ion-icon name="business-outline" class="empty-icon"></ion-icon>
+          <h3>Sin Fincas Vinculadas</h3>
+          <p>No tienes propiedades registradas en tu cuenta.</p>
+        </div>
+      } @else {
+        @for (finca of fincas; track finca.id) {
+          <ion-card class="section-card">
+            <ion-card-header>
+              <div class="header-flex">
+                <div>
+                  <ion-card-title>{{ finca.name }}</ion-card-title>
+                  <ion-card-subtitle>{{ finca.location || 'Sin ubicación registrada' }}</ion-card-subtitle>
+                </div>
+                <ion-badge [color]="finca.myRole === 'OWNER' ? 'primary' : 'medium'">
+                  {{ finca.myRole || 'MIEMBRO' }}
+                </ion-badge>
+              </div>
+            </ion-card-header>
+
+            <ion-card-content>
+              <div class="finca-props-grid">
+                <div class="prop-item">
+                  <span class="prop-label">Razón Social</span>
+                  <span class="prop-val">{{ finca.companyName || '-' }}</span>
+                </div>
+                <div class="prop-item">
+                  <span class="prop-label">CUIT</span>
+                  <span class="prop-val">{{ finca.cuit || '-' }}</span>
+                </div>
+                <div class="prop-item">
+                  <span class="prop-label">RENAPSA</span>
+                  <span class="prop-val">{{ finca.numberRENAPSA || '-' }}</span>
+                </div>
+                <div class="prop-item">
+                  <span class="prop-label">Superficie</span>
+                  <span class="prop-val">{{ finca.surface ? finca.surface + ' ha' : '-' }}</span>
+                </div>
+              </div>
+
+              @if (finca.myRole === 'OWNER') {
+                <div class="action-row ion-margin-top">
+                  <ion-button size="small" fill="outline" color="primary" (click)="abrirModalEdicionFinca(finca)">
+                    <ion-icon name="create-outline" slot="start"></ion-icon>
+                    Editar Finca
+                  </ion-button>
+                  <ion-button size="small" fill="outline" color="danger" (click)="abrirModalEliminarFinca(finca)">
+                    <ion-icon name="trash-outline" slot="start"></ion-icon>
+                    Eliminar
+                  </ion-button>
+                </div>
+              }
+            </ion-card-content>
+          </ion-card>
+        }
+      }
+    </div>
+  }
+
+  <!-- ==================== 4. PESTAÑA: GESTIÓN DE COLLARES IOT ==================== -->
+  @if (pestanaActiva === 'collares') {
+    <div class="tab-pane">
+      <ion-card class="section-card">
+        <ion-card-header>
+          <div class="header-flex">
+            <div>
+              <ion-card-title>Collares de Monitoreo</ion-card-title>
+              <ion-card-subtitle>Inventario de hardware IoT ganadero</ion-card-subtitle>
+            </div>
+            @if (puedeGestionarCollares && fincaIdCollares) {
+              <ion-button size="small" color="primary" (click)="abrirModalNuevoCollar()">
+                <ion-icon name="add-outline" slot="start"></ion-icon>
+                Nuevo Collar
+              </ion-button>
+            }
+          </div>
+        </ion-card-header>
+
+        <ion-card-content>
+          @if (fincas.length > 0) {
+            <ion-item lines="none" class="form-item">
+              <ion-select
+                label="Establecimiento"
+                labelPlacement="stacked"
+                [value]="fincaIdCollares"
+                (ionChange)="cambiarFincaCollares($event.detail.value)"
+                interface="popover"
+              >
+                @for (f of fincas; track f.id) {
+                  <ion-select-option [value]="f.id">{{ f.name }}</ion-select-option>
+                }
+              </ion-select>
+            </ion-item>
+          }
+        </ion-card-content>
+      </ion-card>
+
+      @if (cargandoCollares && collares.length === 0) {
+        <div class="loading-box">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <p>Cargando inventario de collares...</p>
+        </div>
+      } @else if (collares.length === 0) {
+        <div class="empty-box">
+          <ion-icon name="hardware-chip-outline" class="empty-icon"></ion-icon>
+          <h3>Sin Collares Registrados</h3>
+          <p>No hay collares IoT vinculados a este establecimiento.</p>
+          @if (puedeGestionarCollares && fincaIdCollares) {
+            <ion-button size="small" color="primary" class="ion-margin-top" (click)="abrirModalNuevoCollar()">
+              <ion-icon name="add-outline" slot="start"></ion-icon>
+              Registrar Primer Collar
+            </ion-button>
+          }
+        </div>
+      } @else {
+        @for (collar of collares; track collar.id) {
+          <ion-card class="section-card">
+            <ion-card-content>
+              <div class="collar-row">
+                <div class="perm-icon-box location">
+                  <ion-icon name="hardware-chip-outline"></ion-icon>
+                </div>
+
+                <div class="collar-info">
+                  <div class="collar-title-line">
+                    <h4>RFID: {{ collar.rfid }}</h4>
+                    <ion-badge
+                      [color]="
+                        collar.estado === 'Disponible'
+                          ? 'success'
+                          : collar.estado === 'Asignado'
+                            ? 'primary'
+                            : 'warning'
+                      "
+                    >
+                      {{ collar.estado }}
+                    </ion-badge>
+                  </div>
+                  <p>
+                    Modelo: <strong>{{ collar.modelo || 'Estándar' }}</strong> | Batería:
+                    <strong>{{ collar.bateria }}%</strong>
+                  </p>
+                  @if (collar.assignedAnimalCaravan) {
+                    <p class="caravan-tag">Caravana asignada: <strong>{{ collar.assignedAnimalCaravan }}</strong></p>
+                  }
+                </div>
+
+                @if (puedeGestionarCollares) {
+                  <div class="collar-actions">
+                    <ion-button fill="clear" size="small" color="primary" (click)="abrirModalEditarCollar(collar)">
+                      <ion-icon name="create-outline" slot="icon-only"></ion-icon>
+                    </ion-button>
+                    <ion-button fill="clear" size="small" color="danger" (click)="abrirModalEliminarCollar(collar)">
+                      <ion-icon name="trash-outline" slot="icon-only"></ion-icon>
+                    </ion-button>
+                  </div>
+                }
+              </div>
+            </ion-card-content>
+          </ion-card>
+        }
+      }
+    </div>
+  }
+
+  <!-- ==================== CIERRE DE SESIÓN ==================== -->
+  <div class="logout-container ion-margin-top ion-margin-bottom">
+    <ion-button expand="block" fill="outline" color="danger" (click)="confirmarLogout()">
+      <ion-icon name="log-out-outline" slot="start"></ion-icon>
+      Cerrar Sesión
+    </ion-button>
+  </div>
+</ion-content>
+
+<!-- ==================== MODAL 1: EDITAR FINCA ==================== -->
+<ion-modal [isOpen]="modalEdicionFincaAbierto" (didDismiss)="cerrarModalEdicionFinca()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Editar Establecimiento</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cerrarModalEdicionFinca()">Cerrar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <form (ngSubmit)="guardarDatosFinca()">
+        <ion-item lines="inset" class="form-item">
+          <ion-input label="Nombre de la Finca *" labelPlacement="stacked" [(ngModel)]="datosEdicionFinca.name" name="farmName" required></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-input label="Razón Social / Titular" labelPlacement="stacked" [(ngModel)]="datosEdicionFinca.companyName" name="companyName"></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-input label="CUIT" labelPlacement="stacked" [(ngModel)]="datosEdicionFinca.cuit" name="cuit" placeholder="XX-XXXXXXXX-X"></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-input label="N° RENAPSA / RENSPA" labelPlacement="stacked" [(ngModel)]="datosEdicionFinca.numberRENAPSA" name="numberRENAPSA"></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-select label="Orientación Productiva" labelPlacement="stacked" [(ngModel)]="datosEdicionFinca.productiveOrientation" name="productiveOrientation">
+            <ion-select-option value="AGRICULTURAL">Agrícola</ion-select-option>
+            <ion-select-option value="LIVESTOCK">Ganadera</ion-select-option>
+            <ion-select-option value="MIXED">Mixta</ion-select-option>
+          </ion-select>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-input label="Ubicación / Localidad" labelPlacement="stacked" [(ngModel)]="datosEdicionFinca.location" name="location"></ion-input>
+        </ion-item>
+
+        <div class="ion-margin-top">
+          <ion-button expand="block" type="submit" [disabled]="guardandoFinca" class="btn-save">
+            @if (guardandoFinca) {
+              <ion-spinner name="crescent" slot="start"></ion-spinner>
+              Guardando...
+            } @else {
+              <ion-icon name="save-outline" slot="start"></ion-icon>
+              Guardar Cambios
+            }
+          </ion-button>
+        </div>
+      </form>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<!-- ==================== MODAL 2: ELIMINAR FINCA ==================== -->
+<ion-modal [isOpen]="modalEliminarFincaAbierto" (didDismiss)="cerrarModalEliminarFinca()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="danger">
+        <ion-title>Eliminar Establecimiento</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cerrarModalEliminarFinca()">Cerrar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      @if (fincaAEliminar) {
+        <div class="warn-box">
+          <p>
+            Esta acción <strong>no se puede deshacer</strong>. Se eliminará permanentemente la finca
+            <strong>{{ fincaAEliminar.name }}</strong> con todos sus lotes, cultivos y registros asociados.
+          </p>
+        </div>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-input
+            [label]="'Escribe ' + (fincaAEliminar.cuit || fincaAEliminar.name) + ' para confirmar *'"
+            labelPlacement="stacked"
+            [(ngModel)]="confirmacionCuitFinca"
+            placeholder="Confirmación exacta..."
+          ></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-textarea
+            label="Motivo de la eliminación (Obligatorio) *"
+            labelPlacement="stacked"
+            rows="3"
+            [(ngModel)]="motivoEliminacionFinca"
+            placeholder="Ej. Cambio de titularidad, cierre..."
+          ></ion-textarea>
+        </ion-item>
+
+        <div class="action-row ion-margin-top">
+          <ion-button fill="outline" color="medium" (click)="cerrarModalEliminarFinca()">Cancelar</ion-button>
+          <ion-button
+            color="danger"
+            [disabled]="
+              eliminandoFinca ||
+              confirmacionCuitFinca !== (fincaAEliminar.cuit || fincaAEliminar.name) ||
+              !motivoEliminacionFinca.trim()
+            "
+            (click)="confirmarEliminacionFinca()"
+          >
+            {{ eliminandoFinca ? 'Eliminando...' : 'Confirmar Eliminación' }}
+          </ion-button>
+        </div>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<!-- ==================== MODAL 3: CREAR / EDITAR COLLAR IOT ==================== -->
+<ion-modal [isOpen]="modalCollarAbierto" (didDismiss)="cerrarModalCollar()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>{{ esEdicionCollar ? 'Editar Collar IoT' : 'Registrar Collar IoT' }}</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cerrarModalCollar()">Cerrar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      <form (ngSubmit)="guardarCollar()">
+        <ion-item lines="inset" class="form-item">
+          <ion-input
+            label="Código RFID *"
+            labelPlacement="stacked"
+            [(ngModel)]="collarForm.rfid"
+            name="rfid"
+            [readonly]="esEdicionCollar && collarForm.estado === 'Asignado'"
+            placeholder="Ej: COL-1234"
+            helperText="Debe coincidir con el identificador físico del collar."
+            required
+          ></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-input
+            label="Modelo / Marca"
+            labelPlacement="stacked"
+            [(ngModel)]="collarForm.modelo"
+            name="modelo"
+            placeholder="Ej: G-Track Pro"
+          ></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-select
+            label="Estado del Dispositivo"
+            labelPlacement="stacked"
+            [(ngModel)]="collarForm.estado"
+            name="estado"
+            [disabled]="esEdicionCollar && collarForm.estado === 'Asignado'"
+            interface="popover"
+          >
+            <ion-select-option value="Disponible">Disponible para asignar</ion-select-option>
+            <ion-select-option value="En Reparación">En Reparación / Mantenimiento</ion-select-option>
+            @if (esEdicionCollar && collarForm.estado === 'Asignado') {
+              <ion-select-option value="Asignado">Asignado (Solo lectura)</ion-select-option>
+            }
+          </ion-select>
+        </ion-item>
+
+        <div class="action-row ion-margin-top">
+          <ion-button fill="outline" color="medium" type="button" (click)="cerrarModalCollar()">Cancelar</ion-button>
+          <ion-button type="submit" [disabled]="guardandoCollar || !collarForm.rfid.trim()" class="btn-save">
+            @if (guardandoCollar) {
+              <ion-spinner name="crescent" slot="start"></ion-spinner>
+              Guardando...
+            } @else {
+              <ion-icon name="save-outline" slot="start"></ion-icon>
+              Guardar Dispositivo
+            }
+          </ion-button>
+        </div>
+      </form>
+    </ion-content>
+  </ng-template>
+</ion-modal>
+
+<!-- ==================== MODAL 4: DAR DE BAJA COLLAR IOT ==================== -->
+<ion-modal [isOpen]="modalEliminarCollarAbierto" (didDismiss)="cerrarModalEliminarCollar()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="danger">
+        <ion-title>Dar de baja Collar IoT</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cerrarModalEliminarCollar()">Cerrar</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding">
+      @if (collarAEliminar) {
+        <div class="warn-box">
+          <p>Esta acción marcará el collar como inactivo y lo desvinculará de cualquier animal.</p>
+          @if (collarAEliminar.assignedAnimalCaravan) {
+            <p class="caravan-warn">
+              Atención: Este collar está asignado al animal con caravana
+              <strong>{{ collarAEliminar.assignedAnimalCaravan }}</strong>. Al darlo de baja se desasignará automáticamente.
+            </p>
+          }
+        </div>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-input
+            [label]="'Escribe el código RFID ' + collarAEliminar.rfid + ' para confirmar *'"
+            labelPlacement="stacked"
+            [(ngModel)]="confirmacionRfidCollar"
+            placeholder="Escribe el código exacto aquí..."
+          ></ion-input>
+        </ion-item>
+
+        <ion-item lines="inset" class="form-item">
+          <ion-textarea
+            label="Motivo de la baja (Obligatorio) *"
+            labelPlacement="stacked"
+            rows="3"
+            [(ngModel)]="motivoEliminacionCollar"
+            placeholder="Ej. Daño irreparable, pérdida, etc."
+          ></ion-textarea>
+        </ion-item>
+
+        <div class="action-row ion-margin-top">
+          <ion-button fill="outline" color="medium" (click)="cerrarModalEliminarCollar()">Cancelar</ion-button>
+          <ion-button
+            color="danger"
+            [disabled]="
+              eliminandoCollar ||
+              confirmacionRfidCollar !== collarAEliminar.rfid ||
+              !motivoEliminacionCollar.trim()
+            "
+            (click)="confirmarEliminacionCollar()"
+          >
+            {{ eliminandoCollar ? 'Procesando...' : 'Confirmar Baja' }}
+          </ion-button>
+        </div>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

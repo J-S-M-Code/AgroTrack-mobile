@@ -1,20 +1,157 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Blank
-    </ion-title>
+<ion-header class="ion-no-border">
+  <ion-toolbar color="primary">
+    <ion-buttons slot="start">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+    
+    <ion-title>Mis Fincas</ion-title>
+    
+    <ion-buttons slot="end">
+      <!-- Icono de Notificaciones -->
+      <ion-button (click)="abrirModalNotificaciones()">
+        <ion-icon slot="icon-only" name="notifications-outline"></ion-icon>
+        <ion-badge color="danger" class="notification-badge" *ngIf="(notificationService.totalUnreadCount$ | async) as unread">
+          {{ unread }}
+        </ion-badge>
+      </ion-button>
+      
+      <!-- Avatar de Perfil -->
+      <ion-button routerLink="/configuracion">
+        <ion-avatar style="width: 32px; height: 32px; background: #fff; color: var(--ion-color-primary); display: flex; align-items: center; justify-content: center; font-weight: bold; border-radius: 50%;">
+          {{ usuarioNombre ? usuarioNombre.charAt(0).toUpperCase() : 'U' }}
+        </ion-avatar>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Blank</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content class="ion-padding">
+  <div class="dashboard-header">
+    <h2>¡Hola{{ usuarioNombre ? ', ' + usuarioNombre : '' }}!</h2>
+    <p>Aquí tienes el resumen de las fincas asignadas.</p>
+  </div>
 
-  <div id="container">
-    <strong>Ready to create an app?</strong>
-    <p>Start with Ionic <a target="_blank" rel="noopener noreferrer" href="https://ionicframework.com/docs/components">UI Components</a></p>
+  <div *ngIf="isLoading" class="loading-container">
+    <ion-spinner name="crescent"></ion-spinner>
+    <p>Cargando fincas...</p>
+  </div>
+  
+  <div *ngIf="!isLoading && errorMessage" class="empty-state" style="color: var(--ion-color-danger);">
+    <p>{{ errorMessage }}</p>
+  </div>
+
+  <div *ngIf="!isLoading && fincas.length === 0 && !errorMessage" class="empty-state">
+    <p>No tienes fincas asignadas en este momento.</p>
+  </div>
+
+  <div class="fincas-grid" *ngIf="!isLoading && fincas.length > 0">
+    <ion-card *ngFor="let finca of fincas" class="finca-card">
+      
+      <!-- Mapa de Leaflet de la Finca -->
+      <app-finca-minimap [finca]="finca"></app-finca-minimap>
+
+      <ion-card-header>
+        <ion-card-title>{{ finca.name }}</ion-card-title>
+        <ion-card-subtitle>
+          <ion-icon name="location-outline"></ion-icon> {{ finca.location || 'Ubicación no especificada' }}
+        </ion-card-subtitle>
+      </ion-card-header>
+
+      <ion-card-content>
+        <div class="weather-box" *ngIf="finca.clima">
+          <div class="weather-main">
+            <img [src]="finca.clima.iconoUrl" alt="clima" style="width: 40px; height: 40px;">
+            <span class="temperature">{{ finca.clima.temperatura }}°C</span>
+          </div>
+          <div class="weather-details">
+            <p><ion-icon name="cloud-outline"></ion-icon> {{ finca.clima.viento }} km/h</p>
+            <p><ion-icon name="water-outline"></ion-icon> {{ finca.clima.humedad }}%</p>
+          </div>
+        </div>
+        
+        <div class="weather-box empty-weather" *ngIf="!finca.clima">
+          <p>Sin datos del clima</p>
+        </div>
+
+        <ion-button expand="block" color="primary" class="ion-margin-top" (click)="seleccionarFinca(finca)">
+          Entrar a la Finca
+        </ion-button>
+      </ion-card-content>
+    </ion-card>
   </div>
 </ion-content>
+
+<!-- Modal Bottom-Sheet de Notificaciones y Tareas Pendientes -->
+<ion-modal 
+  [isOpen]="isNotificacionesModalOpen" 
+  (didDismiss)="cerrarModalNotificaciones()"
+  [initialBreakpoint]="0.75" 
+  [breakpoints]="[0, 0.5, 0.75, 1]"
+  handleBehavior="cycle"
+>
+  <ng-template>
+    <ion-header>
+      <ion-toolbar color="primary">
+        <ion-title>Notificaciones</ion-title>
+        <ion-buttons slot="end">
+          <ion-button (click)="cerrarModalNotificaciones()">
+            <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+
+    <ion-content class="ion-padding notifications-modal-content">
+      <div *ngIf="cargandoNotificaciones" class="loading-container">
+        <ion-spinner name="crescent"></ion-spinner>
+        <p>Cargando tareas pendientes...</p>
+      </div>
+
+      <div *ngIf="!cargandoNotificaciones && tareasPendientes.length === 0" class="empty-notifications">
+        <ion-icon name="checkmark-circle-outline" color="success" class="empty-icon"></ion-icon>
+        <h3>¡Estás al día!</h3>
+        <p>No tienes tareas pendientes ni avisos sin revisar.</p>
+      </div>
+
+      <div *ngIf="!cargandoNotificaciones && tareasPendientes.length > 0" class="notifications-list">
+        <div class="notifications-section-header">
+          <h4>Tareas asignadas pendientes ({{ tareasPendientes.length }})</h4>
+          <ion-button fill="clear" size="small" (click)="marcarNotificacionesLeidas()">
+            Marcar como vistas
+          </ion-button>
+        </div>
+
+        <ion-list lines="none">
+          <ion-item 
+            *ngFor="let tarea of tareasPendientes" 
+            button 
+            detail="true"
+            class="notification-item"
+            (click)="abrirTareaDesdeNotificacion(tarea)"
+          >
+            <div class="item-content">
+              <div class="item-top">
+                <span class="farm-badge">
+                  <ion-icon name="business-outline"></ion-icon>
+                  {{ obtenerNombreFinca(tarea) }}
+                </span>
+                <span class="priority-badge" [ngClass]="tarea.rawPriority.toLowerCase()">
+                  {{ tarea.prioridad }}
+                </span>
+                <span class="action-tag">{{ tarea.accionLabel }}</span>
+              </div>
+              <h3 class="task-title">{{ tarea.titulo }}</h3>
+              <p class="task-meta">
+                <ion-icon name="location-outline"></ion-icon>
+                <span>{{ tarea.lote ? 'Lote: ' + tarea.lote : 'Área General de la Finca' }}</span>
+                <span *ngIf="tarea.fechaVencimiento" class="due-date">
+                  · Vence: {{ tarea.fechaVencimiento | date:'dd/MM/yyyy' }}
+                </span>
+              </p>
+            </div>
+          </ion-item>
+        </ion-list>
+      </div>
+    </ion-content>
+  </ng-template>
+</ion-modal>

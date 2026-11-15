@@ -1,0 +1,41 @@
+:host { display: flex; flex-direction: column; height: 100%; }
+.state-box { padding: 36px 16px; text-align: center; color: #64748b; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.detail-body { padding: 14px 14px 36px; display: flex; flex-direction: column; gap: 14px; }
+.detail-card { margin: 0; border-radius: 14px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,.05); border: 1px solid #e2e8f0; border-left: 4px solid #f59e0b; }
+.detail-card[data-status="IN_PROGESS"] { border-left-color: #2563eb; }
+.detail-card[data-status="FINISH"], .finish-report-card { border-left-color: #0d8a5c; }
+.card-pad { padding: 16px; }
+.hero-top, .rel-left { display: flex; align-items: center; gap: 10px; }
+.hero-icon { width: 42px; height: 42px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.3rem; flex-shrink: 0; background: #fef3c7; color: #d97706; }
+.hero-icon[data-status="IN_PROGESS"], .status-pill[data-status="IN_PROGESS"] { background: #dbeafe; color: #1d4ed8; }
+.hero-icon[data-status="FINISH"], .rel-icon { background: #e6f4ea; color: #0d8a5c; }
+.hero-titles { flex: 1; }
+.badges-row { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.action-pill, .prio-pill, .status-pill, .count-pill, .finish-date { padding: 3px 8px; border-radius: 99px; font-size: .71rem; font-weight: 700; }
+.action-pill { background: #f1f5f9; color: #334155; }
+.prio-pill { background: #e0f2fe; color: #0369a1; }
+.prio-pill[data-prio="Alta"] { background: #fee2e2; color: #b91c1c; }
+.prio-pill[data-prio="Media"], .status-pill { background: #fef3c7; color: #b45309; }
+.status-pill[data-status="FINISH"], .finish-date { background: #dcfce7; color: #15803d; }
+.main-title { margin: 0; font-size: 1.1rem; font-weight: 700; color: #1e293b; }
+.meta-grid, .exec-actions { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; padding-top: 10px; border-top: 1px solid #f1f5f9; }
+.meta-item { display: flex; align-items: center; gap: 6px; font-size: .8rem; color: #64748b; strong { color: #1e293b; } }
+.section-heading { margin: 0 0 10px; font-size: .95rem; font-weight: 700; color: #1e293b; display: flex; align-items: center; gap: 6px; ion-icon { color: #0d8a5c; } }
+.section-header-between, .relation-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.relation-row { margin: 0; padding: 8px 10px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; }
+.desc-text { margin: 0; font-size: .88rem; color: #334155; line-height: 1.5; white-space: pre-line; }
+.muted-empty { margin: 0; font-size: .82rem; color: #64748b; }
+.rel-icon { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.rel-type { display: block; font-size: .7rem; color: #64748b; }
+.rel-name { display: block; font-size: .85rem; color: #1e293b; }
+.rel-action { font-size: .76rem; font-weight: 700; color: #0d8a5c; display: flex; align-items: center; }
+.gps-assist-banner { display: flex; align-items: center; gap: 6px; padding: 8px 10px; margin-bottom: 10px; border-radius: 8px; background: #eff6ff; color: #1e40af; border: 1px solid #bfdbfe; font-size: .78rem; font-weight: 600; }
+.gps-assist-banner.inside { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+.map-box { height: 220px; border-radius: 10px; overflow: hidden; border: 1px solid #e2e8f0; }
+.leaflet-box, .photo-item img { width: 100%; height: 100%; object-fit: cover; }
+.count-pill { background: #eff6ff; color: #1d4ed8; }
+.photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; }
+.photo-item { position: relative; aspect-ratio: 1; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+.zoom-badge { position: absolute; bottom: 4px; right: 4px; width: 22px; height: 22px; border-radius: 4px; background: rgba(0,0,0,.6); color: #fff; display: flex; align-items: center; justify-content: center; font-size: .8rem; }
+.remove-photo-btn { position: absolute; top: 3px; right: 3px; border: 0; background: #fff; color: #dc2626; border-radius: 50%; width: 24px; height: 24px; padding: 0; }
+.error-banner { padding: 8px 10px; margin-bottom: 10px; border-radius: 8px; background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; font-size: .8rem; }

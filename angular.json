@@ -34,7 +34,12 @@
                 "output": "./svg"
               }
             ],
-            "styles": ["src/global.scss", "src/theme/variables.scss"],
+            "styles": [
+              "node_modules/leaflet/dist/leaflet.css",
+              "node_modules/@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css",
+              "src/global.scss", 
+              "src/theme/variables.scss"
+            ],
             "scripts": []
           },
           "configurations": {
@@ -120,7 +125,8 @@
   "cli": {
     "schematicCollections": [
       "@ionic/angular-toolkit"
-    ]
+    ],
+    "analytics": "4de3238a-d615-4ea6-87ed-ec7772d470e1"
   },
   "schematics": {
     "@ionic/angular-toolkit:component": {

@@ -1,0 +1,159 @@
+.controls-toolbar {
+  --background: #fff;
+  --padding-start: 12px;
+  --padding-end: 12px;
+  --padding-top: 8px;
+  --padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.controls-wrapper, .personas-list, .contact-rows { display: flex; flex-direction: column; }
+.controls-wrapper { gap: 8px; }
+.personas-list { gap: 10px; padding-bottom: 84px; }
+.contact-rows { gap: 3px; }
+
+.personas-searchbar {
+  --background: #f1f5f9;
+  --color: #0f172a;
+  --placeholder-color: #64748b;
+  --icon-color: #475569;
+  --clear-button-color: #64748b;
+  --border-radius: 10px;
+  --box-shadow: none;
+  padding: 0;
+}
+
+.personas-segment {
+  --background: #f1f5f9;
+  border-radius: 10px;
+  padding: 2px;
+
+  ion-segment-button {
+    --indicator-color: #fff;
+    --color: #64748b;
+    --color-checked: #0d8a5c;
+    min-height: 34px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-transform: none;
+  }
+}
+
+.personas-content { --background: #f8fafc; }
+
+.empty-box {
+  text-align: center;
+  padding: 30px 16px;
+  color: #64748b;
+  .empty-icon { font-size: 2.6rem; color: #94a3b8; }
+  h3 { margin: 8px 0 4px; color: #1e293b; font-weight: 700; }
+  p { margin: 0; font-size: 0.85rem; }
+}
+
+.persona-card {
+  margin: 0;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #f1f5f9;
+  ion-card-content { padding: 10px 12px; }
+}
+
+.card-layout, .role-desc-card { display: flex; align-items: flex-start; gap: 10px; }
+
+.avatar-col, .title-row, .status-indicator { display: flex; align-items: center; }
+
+.avatar-col {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  color: #fff;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  background: #64748b;
+  &.owner { background: #0d8a5c; }
+  &.foreman { background: #0284c7; }
+  &.agronomist { background: #16a34a; }
+  &.veterinarian { background: #d97706; }
+  &.applicator { background: #6366f1; }
+}
+
+.info-col { flex: 1; }
+.title-row { justify-content: space-between; gap: 6px; }
+.member-name { margin: 0; font-size: 0.98rem; font-weight: 700; color: #0f172a; }
+
+.status-indicator {
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #16a34a;
+  .status-dot { width: 6px; height: 6px; border-radius: 50%; background: #16a34a; }
+  &.pending { color: #d97706; .status-dot { background: #d97706; } }
+}
+
+.badge-row {
+  margin: 2px 0 6px;
+  .role-badge { font-size: 0.7rem; padding: 2px 6px; border-radius: 8px; text-transform: uppercase; }
+}
+
+.contact-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: #475569;
+  text-decoration: none;
+  ion-icon { font-size: 0.9rem; color: #0d8a5c; }
+}
+
+.action-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  border-top: 1px solid #f1f5f9;
+  margin-top: 8px;
+  padding-top: 6px;
+  ion-button { font-size: 0.76rem; }
+}
+
+.modal-form-intro {
+  margin-bottom: 12px;
+  h4 { margin: 0; font-size: 1rem; font-weight: 700; color: #0f172a; }
+  p { margin: 2px 0 0; font-size: 0.8rem; color: #64748b; }
+}
+
+.form-item { --background: #f8fafc; --border-radius: 8px; margin-bottom: 6px; border: 1px solid #e2e8f0; }
+
+.pref-item {
+  --background: transparent;
+  --padding-start: 0;
+  --padding-end: 0;
+  h3 { margin: 0; font-size: 0.88rem; font-weight: 600; color: #1e293b; }
+  p { margin: 2px 0 0; font-size: 0.72rem; color: #64748b; }
+}
+
+.role-desc-card {
+  gap: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 8px;
+  border-radius: 6px;
+  ion-icon { font-size: 1.3rem; color: #16a34a; flex-shrink: 0; }
+  strong { font-size: 0.84rem; color: #166534; display: block; }
+  p { margin: 2px 0 0; font-size: 0.75rem; color: #15803d; }
+}
+
+.warn-box {
+  background: #fef2f2;
+  border-left: 4px solid #ef4444;
+  padding: 8px 10px;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 0.82rem;
+  color: #991b1b;
+  p { margin: 0; }
+}
+
+.action-row { display: flex; gap: 8px; ion-button { flex: 1; } }
+.btn-save { --border-radius: 8px; --background: var(--ion-color-primary, #0d8a5c); font-weight: 600; }
