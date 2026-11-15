@@ -78,4 +78,25 @@ describe('LoginComponent', () => {
       'Sin conexión o servidor inaccesible. Verificá tu red e intentá nuevamente.'
     );
   });
+
+  it('validates email format and required fields through ReactiveFormsModule', () => {
+    expect(component.loginForm.invalid).toBe(true);
+
+    component.loginForm.setValue({
+      email: 'correo-invalido',
+      password: '123',
+    });
+    expect(component.loginForm.controls.email.hasError('email')).toBe(true);
+    expect(component.loginForm.invalid).toBe(true);
+
+    component.onSubmit();
+    expect(authServiceMock.login).not.toHaveBeenCalled();
+    expect(component.errorMessage).toBe('Ingresá un correo electrónico válido.');
+
+    component.loginForm.setValue({
+      email: 'productor@agrotrack.com',
+      password: 'Password123',
+    });
+    expect(component.loginForm.valid).toBe(true);
+  });
 });

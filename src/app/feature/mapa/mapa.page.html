@@ -335,46 +335,48 @@
           {{ errorGuardandoLote }}
         </div>
 
-        <ion-item>
-          <ion-label position="stacked">Nombre del Lote</ion-label>
-          <ion-input [(ngModel)]="nuevoLoteNombre" placeholder="Ej: Potrero 1"></ion-input>
-        </ion-item>
+        <form [formGroup]="loteForm" (ngSubmit)="guardarLote()">
+          <ion-item>
+            <ion-label position="stacked">Nombre del Lote</ion-label>
+            <ion-input formControlName="nombre" placeholder="Ej: Potrero 1"></ion-input>
+          </ion-item>
 
-        <ion-item>
-          <ion-label position="stacked">Tipo de Lote</ion-label>
-          <ion-select [(ngModel)]="nuevoLoteTipo" interface="popover">
-            <ion-select-option value="PASTURE">Pastura / Ganado</ion-select-option>
-            <ion-select-option value="AGRICULTURAL">Agrícola / Cultivo</ion-select-option>
-            <ion-select-option value="WATER_ZONE">Zona de Agua</ion-select-option>
-            <ion-select-option value="HANDLING_PEN">Corral de Manejo</ion-select-option>
-            <ion-select-option value="FEEDING_ZONE">Zona de Alimentación</ion-select-option>
-            <ion-select-option value="RESERVE">Reserva / Bosque Nativo</ion-select-option>
-          </ion-select>
-        </ion-item>
+          <ion-item>
+            <ion-label position="stacked">Tipo de Lote</ion-label>
+            <ion-select formControlName="tipo" interface="popover">
+              <ion-select-option value="PASTURE">Pastura / Ganado</ion-select-option>
+              <ion-select-option value="AGRICULTURAL">Agrícola / Cultivo</ion-select-option>
+              <ion-select-option value="WATER_ZONE">Zona de Agua</ion-select-option>
+              <ion-select-option value="HANDLING_PEN">Corral de Manejo</ion-select-option>
+              <ion-select-option value="FEEDING_ZONE">Zona de Alimentación</ion-select-option>
+              <ion-select-option value="RESERVE">Reserva / Bosque Nativo</ion-select-option>
+            </ion-select>
+          </ion-item>
 
-        <ion-item *ngIf="nuevoLoteTipo === 'AGRICULTURAL' || nuevoLoteTipo === 'PASTURE'">
-          <ion-label position="stacked">Tipo de Suelo</ion-label>
-          <ion-select [(ngModel)]="nuevoLoteSuelo" interface="popover">
-            <ion-select-option value="UNKNOWN">No lo sé (Desconocido)</ion-select-option>
-            <ion-select-option value="CLAYEY">Arcilloso</ion-select-option>
-            <ion-select-option value="SANDY">Arenoso</ion-select-option>
-            <ion-select-option value="SILTY">Limoso</ion-select-option>
-            <ion-select-option value="LOAMY">Franco</ion-select-option>
-            <ion-select-option value="SANDY_LOAM">Franco-Arenoso</ion-select-option>
-            <ion-select-option value="CLAY_LOAM">Franco-Arcilloso</ion-select-option>
-          </ion-select>
-        </ion-item>
+          <ion-item *ngIf="nuevoLoteTipo === 'AGRICULTURAL' || nuevoLoteTipo === 'PASTURE'">
+            <ion-label position="stacked">Tipo de Suelo</ion-label>
+            <ion-select formControlName="suelo" interface="popover">
+              <ion-select-option value="UNKNOWN">No lo sé (Desconocido)</ion-select-option>
+              <ion-select-option value="CLAYEY">Arcilloso</ion-select-option>
+              <ion-select-option value="SANDY">Arenoso</ion-select-option>
+              <ion-select-option value="SILTY">Limoso</ion-select-option>
+              <ion-select-option value="LOAMY">Franco</ion-select-option>
+              <ion-select-option value="SANDY_LOAM">Franco-Arenoso</ion-select-option>
+              <ion-select-option value="CLAY_LOAM">Franco-Arcilloso</ion-select-option>
+            </ion-select>
+          </ion-item>
 
-        <ion-item>
-          <ion-label position="stacked">Descripción (Opcional)</ion-label>
-          <ion-textarea [(ngModel)]="nuevoLoteDescripcion" rows="3"></ion-textarea>
-        </ion-item>
+          <ion-item>
+            <ion-label position="stacked">Descripción (Opcional)</ion-label>
+            <ion-textarea formControlName="descripcion" rows="3"></ion-textarea>
+          </ion-item>
 
-        <div class="ion-margin-top">
-          <ion-button expand="block" (click)="guardarLote()" [disabled]="!nuevoLoteNombre.trim() || guardandoLote">
-            {{ guardandoLote ? 'Guardando...' : 'Guardar Lote' }}
-          </ion-button>
-        </div>
+          <div class="ion-margin-top">
+            <ion-button expand="block" type="submit" [disabled]="loteForm.invalid || guardandoLote">
+              {{ guardandoLote ? 'Guardando...' : 'Guardar Lote' }}
+            </ion-button>
+          </div>
+        </form>
       </ion-content>
     </ng-template>
   </ion-modal>
